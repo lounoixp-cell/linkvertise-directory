@@ -1,20 +1,9 @@
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Post } from '@/types/post';
 
 interface PostNavigationProps {
   prevPost: Post | null;
   nextPost: Post | null;
-}
-
-function formatDateSafely(dateStr?: string | null): string {
-  if (!dateStr || dateStr.trim() === '') return 'Recently published';
-  const parsed = new Date(dateStr);
-  if (isNaN(parsed.getTime())) return 'Recently published';
-  return parsed.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-  });
 }
 
 export default function PostNavigation({ prevPost, nextPost }: PostNavigationProps) {
@@ -23,80 +12,50 @@ export default function PostNavigation({ prevPost, nextPost }: PostNavigationPro
   return (
     <nav
       aria-label="Post navigation"
-      className="mt-10 border-t border-neutral-800 pt-8"
+      className="mt-6 border-t border-neutral-800/80 pt-6"
     >
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="flex items-start justify-between gap-4">
         {/* Previous Post */}
-        {prevPost ? (
-          <Link
-            href={`/post/${prevPost.slug || prevPost.id}`}
-            data-nav="prev"
-            data-active="prev"
-            className="group flex flex-col rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 transition-all duration-200 hover:border-neutral-700 hover:bg-neutral-900 text-left"
-          >
-            <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-neutral-400 group-hover:text-white transition-colors">
-              <ChevronLeft className="h-4 w-4 shrink-0 -ml-1 text-neutral-400 group-hover:text-white" />
-              <span>&larr; PREVIOUS</span>
-            </div>
-            <span className="mt-1.5 text-sm sm:text-base font-bold text-neutral-200 group-hover:text-white line-clamp-1">
+        <div className="text-left flex-1 min-w-0">
+          <span className="text-xs text-neutral-400 block mb-1">Previous</span>
+          {prevPost ? (
+            <Link
+              href={`/post/${prevPost.slug || prevPost.id}`}
+              data-nav="prev"
+              className="text-sm sm:text-base font-semibold text-red-500 hover:text-red-400 hover:underline line-clamp-1 inline-block"
+            >
               &laquo; {prevPost.title}
+            </Link>
+          ) : (
+            <span
+              data-nav="prev-disabled"
+              className="text-sm text-neutral-600 select-none block"
+            >
+              &laquo; None
             </span>
-            <span className="mt-1 text-xs text-neutral-500">
-              {(prevPost.tag || prevPost.category || 'General').toUpperCase()} &bull; {formatDateSafely(prevPost.publishedAt)}
-            </span>
-          </Link>
-        ) : (
-          <div
-            data-nav="prev-disabled"
-            data-disabled="prev"
-            aria-disabled="true"
-            className="flex flex-col rounded-xl border border-neutral-900/40 bg-neutral-950/40 p-4 opacity-40 select-none text-left cursor-not-allowed"
-          >
-            <div className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-neutral-600">
-              <ChevronLeft className="h-4 w-4 shrink-0 -ml-1" />
-              <span>PREVIOUS</span>
-            </div>
-            <span className="mt-1.5 text-sm font-medium text-neutral-600">
-              No previous post
-            </span>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Next Post */}
-        {nextPost ? (
-          <Link
-            href={`/post/${nextPost.slug || nextPost.id}`}
-            data-nav="next"
-            data-active="next"
-            className="group flex flex-col rounded-xl border border-neutral-800 bg-neutral-900/60 p-4 transition-all duration-200 hover:border-neutral-700 hover:bg-neutral-900 text-left sm:text-right"
-          >
-            <div className="flex items-center justify-start sm:justify-end gap-1.5 text-xs font-semibold uppercase tracking-wider text-neutral-400 group-hover:text-white transition-colors">
-              <span>NEXT &rarr;</span>
-              <ChevronRight className="h-4 w-4 shrink-0 -mr-1 text-neutral-400 group-hover:text-white" />
-            </div>
-            <span className="mt-1.5 text-sm sm:text-base font-bold text-neutral-200 group-hover:text-white line-clamp-1">
+        <div className="text-right sm:text-right flex-1 min-w-0">
+          <span className="text-xs text-neutral-400 block mb-1">Next</span>
+          {nextPost ? (
+            <Link
+              href={`/post/${nextPost.slug || nextPost.id}`}
+              data-nav="next"
+              className="text-sm sm:text-base font-semibold text-red-500 hover:text-red-400 hover:underline line-clamp-1 inline-block"
+            >
               {nextPost.title} &raquo;
+            </Link>
+          ) : (
+            <span
+              data-nav="next-disabled"
+              className="text-sm text-neutral-600 select-none block"
+            >
+              None &raquo;
             </span>
-            <span className="mt-1 text-xs text-neutral-500">
-              {(nextPost.tag || nextPost.category || 'General').toUpperCase()} &bull; {formatDateSafely(nextPost.publishedAt)}
-            </span>
-          </Link>
-        ) : (
-          <div
-            data-nav="next-disabled"
-            data-disabled="next"
-            aria-disabled="true"
-            className="flex flex-col rounded-xl border border-neutral-900/40 bg-neutral-950/40 p-4 opacity-40 select-none text-left sm:text-right cursor-not-allowed"
-          >
-            <div className="flex items-center justify-start sm:justify-end gap-1 text-xs font-semibold uppercase tracking-wider text-neutral-600">
-              <span>NEXT</span>
-              <ChevronRight className="h-4 w-4 shrink-0 -mr-1" />
-            </div>
-            <span className="mt-1.5 text-sm font-medium text-neutral-600">
-              No next post
-            </span>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </nav>
   );

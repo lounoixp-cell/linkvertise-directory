@@ -64,17 +64,9 @@ export default async function PostDetailPage({ params }: PostPageProps) {
   }
 
   const { prevPost, nextPost } = await getAdjacentPosts(post.slug);
-  const parsedDate = post.publishedAt ? new Date(post.publishedAt) : null;
-  const formattedDate = parsedDate && !isNaN(parsedDate.getTime())
-    ? parsedDate.toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-      })
-    : 'Recently published';
 
   return (
-    <main className="mx-auto max-w-4xl space-y-8">
+    <main className="mx-auto max-w-4xl space-y-6">
       {/* Top Breadcrumb / Back Navigation */}
       <nav className="flex items-center justify-between">
         <Link
@@ -87,9 +79,9 @@ export default async function PostDetailPage({ params }: PostPageProps) {
       </nav>
 
       {/* Main Post Container */}
-      <article className="overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6 shadow-xl backdrop-blur-sm">
+      <article className="overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6 sm:p-8 shadow-xl backdrop-blur-sm">
         {/* Preview Image maintaining aspect ratio */}
-        <div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl bg-neutral-950">
+        <div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl bg-neutral-950 mb-6">
           {post.previewImage ? (
             <Image
               src={post.previewImage}
@@ -110,41 +102,28 @@ export default async function PostDetailPage({ params }: PostPageProps) {
           )}
         </div>
 
-        {/* Content Details */}
-        <div className="mt-6 space-y-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xs uppercase text-neutral-400 font-semibold tracking-wider">
-              {post.tag || post.category}
-            </span>
-          </div>
+        {/* Post Title */}
+        <h1 className="text-2xl sm:text-4xl font-bold text-white tracking-tight leading-tight">
+          {post.title}
+        </h1>
 
-          <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight leading-tight">
-            {post.title}
-          </h1>
-
-          <time dateTime={post.publishedAt} className="text-xs text-neutral-500 block">
-            Published {formattedDate}
-          </time>
-
-          {post.description && (
-            <p className="text-sm sm:text-base text-neutral-300 leading-relaxed pt-2">
-              {post.description}
-            </p>
-          )}
-
-          {/* External Link Action Container */}
-          <div data-component="external-link-button" className="pt-6 border-t border-neutral-800">
-            <ExternalLinkButton
-              externalUrl={post.externalUrl}
-              destinationDomain={post.destinationDomain}
-              postTitle={post.title}
-            />
-          </div>
+        {/* By ADMIN / Author line */}
+        <div className="mt-2 text-xs sm:text-sm font-medium text-neutral-400">
+          By <span className="text-red-500 font-bold uppercase">{post.tag || 'ADMIN'}</span>
         </div>
-      </article>
 
-      {/* Previous / Next Post Navigation */}
-      <PostNavigation prevPost={prevPost} nextPost={nextPost} />
+        {/* Direct Link */}
+        <div data-component="external-link-button" className="mt-4">
+          <ExternalLinkButton
+            externalUrl={post.externalUrl}
+            destinationDomain={post.destinationDomain}
+            postTitle={post.title}
+          />
+        </div>
+
+        {/* Previous / Next Post Navigation matching screenshot */}
+        <PostNavigation prevPost={prevPost} nextPost={nextPost} />
+      </article>
     </main>
   );
 }
