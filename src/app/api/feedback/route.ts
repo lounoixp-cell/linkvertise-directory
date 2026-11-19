@@ -108,14 +108,7 @@ export async function POST(req: NextRequest | Request) {
       );
     }
 
-    if (body.email) {
-      if (typeof body.email !== 'string') {
-        return NextResponse.json(
-          { success: false, error: 'Invalid email address format.' },
-          { status: 400 }
-        );
-      }
-
+    if (body.email && typeof body.email === 'string' && body.email.trim() !== '') {
       if (CRLF_REGEX.test(body.email)) {
         return NextResponse.json(
           { success: false, error: 'Invalid characters in email address (CRLF prohibited).' },
@@ -130,6 +123,11 @@ export async function POST(req: NextRequest | Request) {
           { status: 400 }
         );
       }
+    } else if (body.email && typeof body.email !== 'string') {
+      return NextResponse.json(
+        { success: false, error: 'Invalid email address format.' },
+        { status: 400 }
+      );
     }
 
     if (body.name) {

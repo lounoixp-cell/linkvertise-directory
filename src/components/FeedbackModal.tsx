@@ -135,7 +135,7 @@ export default function FeedbackModal({ isOpen: isOpenProp, onClose: onCloseProp
       return;
     }
 
-    // 3. Email validation
+    // 3. Email validation (completely optional)
     if (email && email.trim() !== '') {
       if (/[\r\n]/.test(email)) {
         setErrorMessage('Invalid characters in email address (CRLF prohibited).');
@@ -144,7 +144,7 @@ export default function FeedbackModal({ isOpen: isOpenProp, onClose: onCloseProp
       }
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email.trim())) {
-        setErrorMessage('Please provide a valid email address.');
+        setErrorMessage('Please provide a valid email address or leave the field blank.');
         setStatus('error');
         return;
       }
@@ -303,9 +303,12 @@ export default function FeedbackModal({ isOpen: isOpenProp, onClose: onCloseProp
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-xs font-medium text-neutral-400">
-                Email (optional)
-              </label>
+              <div className="flex items-center justify-between">
+                <label htmlFor="email" className="block text-xs font-medium text-neutral-400">
+                  Email <span className="text-neutral-500 font-normal">(optional)</span>
+                </label>
+                <span className="text-[11px] text-neutral-500">Anonymous by default</span>
+              </div>
               <input
                 type="email"
                 id="email"
@@ -313,9 +316,12 @@ export default function FeedbackModal({ isOpen: isOpenProp, onClose: onCloseProp
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={status === 'submitting'}
-                placeholder="Email (optional)"
+                placeholder="your@email.com (optional)"
                 className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-500 disabled:opacity-60 disabled:cursor-not-allowed min-h-[44px]"
               />
+              <p className="mt-1 text-[11px] text-neutral-500">
+                Leave blank to submit anonymously, or provide if you would like a reply.
+              </p>
             </div>
 
             <div>
