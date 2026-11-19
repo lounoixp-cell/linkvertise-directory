@@ -74,7 +74,7 @@ export default async function PostDetailPage({ params }: PostPageProps) {
           className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-medium text-neutral-400 hover:text-white transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          <span>&larr; Back to directory</span>
+          <span>Back to directory</span>
         </Link>
       </nav>
 
