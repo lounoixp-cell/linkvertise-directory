@@ -14,11 +14,11 @@ export default function Footer() {
             type="button"
             data-action="feedback"
             aria-haspopup="dialog"
-            aria-label="Send feedback"
+            aria-label="Request content removal"
             onClick={openFeedback}
             className="min-h-[44px] px-2 py-1 text-xs text-neutral-500 hover:text-neutral-300 transition-colors focus:outline-none underline underline-offset-4 flex items-center"
           >
-            Feedback
+            Content Removal
           </button>
           <p className="text-neutral-600">Links point strictly to external destinations.</p>
         </div>

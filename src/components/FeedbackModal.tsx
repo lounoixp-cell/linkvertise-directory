@@ -216,12 +216,17 @@ export default function FeedbackModal({ isOpen: isOpenProp, onClose: onCloseProp
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between pb-4 border-b border-neutral-800">
-          <h2 id="feedback-title" className="text-base font-bold text-white">
-            Website Feedback
-          </h2>
+          <div>
+            <h2 id="feedback-title" className="text-base font-bold text-white">
+              Content Removal Request
+            </h2>
+            <p className="text-xs text-neutral-400 mt-0.5">
+              Request the removal of a listing or external link.
+            </p>
+          </div>
           <button
             type="button"
-            aria-label="Close feedback modal"
+            aria-label="Close modal"
             data-action="close"
             onClick={handleCloseModal}
             className="text-neutral-400 hover:text-white min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-neutral-800 transition-colors"
@@ -232,8 +237,8 @@ export default function FeedbackModal({ isOpen: isOpenProp, onClose: onCloseProp
 
         {status === 'success' ? (
           <div role="status" className="rounded-xl border border-emerald-500/30 bg-emerald-950/40 p-6 text-center space-y-3 mt-4">
-            <h3 className="text-base font-bold text-emerald-400">Feedback Sent</h3>
-            <p className="mt-2 text-sm text-neutral-300">Thank you for helping improve the directory!</p>
+            <h3 className="text-base font-bold text-emerald-400">Request Submitted</h3>
+            <p className="mt-2 text-sm text-neutral-300">Thank you. Your content removal request has been received and will be reviewed promptly.</p>
             <button
               type="button"
               data-action="close"
@@ -315,7 +320,7 @@ export default function FeedbackModal({ isOpen: isOpenProp, onClose: onCloseProp
 
             <div>
               <label htmlFor="message" className="block text-xs font-medium text-neutral-400">
-                Message <span className="text-red-500">*</span>
+                Removal Details / URL <span className="text-red-500">*</span>
               </label>
               <textarea
                 id="message"
@@ -326,7 +331,7 @@ export default function FeedbackModal({ isOpen: isOpenProp, onClose: onCloseProp
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 disabled={status === 'submitting'}
-                placeholder="Share your suggestions, questions, or bug reports..."
+                placeholder="Please specify the post URL or title and the reason for removal (e.g. copyright holder, dead link, DMCA)..."
                 className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-500 disabled:opacity-60 disabled:cursor-not-allowed"
               />
             </div>
@@ -351,12 +356,12 @@ export default function FeedbackModal({ isOpen: isOpenProp, onClose: onCloseProp
                 {status === 'submitting' ? (
                   <>
                     <Loader2 className="animate-spin h-4 w-4" data-icon="spinner" />
-                    <span>Sending...</span>
+                    <span>Submitting...</span>
                   </>
                 ) : errorMessage ? (
-                  'Retry Send'
+                  'Retry Submit'
                 ) : (
-                  'Send'
+                  'Submit Request'
                 )}
               </button>
             </div>

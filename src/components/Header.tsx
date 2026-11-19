@@ -28,11 +28,11 @@ export default function Header() {
             data-action="feedback"
             aria-haspopup="dialog"
             aria-expanded={isOpen}
-            aria-label="Send feedback"
+            aria-label="Request content removal"
             onClick={openFeedback}
             className="min-h-[44px] min-w-[44px] px-3 py-2 text-xs font-medium text-neutral-400 hover:text-white transition-colors flex items-center justify-center rounded-lg hover:bg-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-400"
           >
-            Feedback
+            Content Removal
           </button>
         </div>
       </div>
