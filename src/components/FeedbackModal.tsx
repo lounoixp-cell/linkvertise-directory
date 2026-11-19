@@ -135,19 +135,24 @@ export default function FeedbackModal({ isOpen: isOpenProp, onClose: onCloseProp
       return;
     }
 
-    // 3. Email validation (completely optional)
-    if (email && email.trim() !== '') {
-      if (/[\r\n]/.test(email)) {
-        setErrorMessage('Invalid characters in email address (CRLF prohibited).');
-        setStatus('error');
-        return;
-      }
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email.trim())) {
-        setErrorMessage('Please provide a valid email address or leave the field blank.');
-        setStatus('error');
-        return;
-      }
+    // 2. Email validation (strictly required for removal requests)
+    if (!email || email.trim() === '') {
+      setErrorMessage('Email address is required.');
+      setStatus('error');
+      return;
+    }
+
+    if (/[\r\n]/.test(email)) {
+      setErrorMessage('Invalid characters in email address (CRLF prohibited).');
+      setStatus('error');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setErrorMessage('Please provide a valid email address.');
+      setStatus('error');
+      return;
     }
 
     // 4. Name validation
@@ -303,24 +308,22 @@ export default function FeedbackModal({ isOpen: isOpenProp, onClose: onCloseProp
             </div>
 
             <div>
-              <div className="flex items-center justify-between">
-                <label htmlFor="email" className="block text-xs font-medium text-neutral-400">
-                  Email <span className="text-neutral-500 font-normal">(optional)</span>
-                </label>
-                <span className="text-[11px] text-neutral-500">Anonymous by default</span>
-              </div>
+              <label htmlFor="email" className="block text-xs font-medium text-neutral-400">
+                Email address <span className="text-red-500">*</span>
+              </label>
               <input
                 type="email"
                 id="email"
                 name="email"
+                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={status === 'submitting'}
-                placeholder="your@email.com (optional)"
+                placeholder="your@email.com"
                 className="mt-1 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-neutral-500 focus:outline-none focus:ring-1 focus:ring-neutral-500 disabled:opacity-60 disabled:cursor-not-allowed min-h-[44px]"
               />
               <p className="mt-1 text-[11px] text-neutral-500">
-                Leave blank to submit anonymously, or provide if you would like a reply.
+                Required so we can verify and confirm your removal request.
               </p>
             </div>
 
