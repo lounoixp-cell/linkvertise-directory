@@ -1,10 +1,10 @@
 import { Metadata } from 'next';
-import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, ImageOff } from 'lucide-react';
 import { getPostByIdOrSlug, getAdjacentPosts, getAllSortedPosts } from '@/lib/posts';
 import ExternalLinkButton from '@/components/ExternalLinkButton';
 import PostNavigation from '@/components/PostNavigation';
+import ProtectedImage from '@/components/ProtectedImage';
 
 interface PostPageProps {
   params: {
@@ -80,16 +80,15 @@ export default async function PostDetailPage({ params }: PostPageProps) {
 
       {/* Main Post Container */}
       <article className="overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6 sm:p-8 shadow-xl backdrop-blur-sm">
-        {/* Preview Image maintaining aspect ratio */}
+        {/* Preview Image maintaining aspect ratio with anti-download protection */}
         <div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl bg-neutral-950 mb-6">
           {post.previewImage ? (
-            <Image
+            <ProtectedImage
               src={post.previewImage}
               alt={post.previewImageAlt || post.title}
               fill
               sizes="(max-width: 1024px) 100vw, 896px"
               priority
-              className="object-cover"
             />
           ) : (
             <div

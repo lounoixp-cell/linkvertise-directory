@@ -4,6 +4,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { FeedbackProvider } from '@/components/FeedbackContext';
 import FeedbackModal from '@/components/FeedbackModal';
+import SecurityShield from '@/components/SecurityShield';
 
 export const metadata: Metadata = {
   title: 'Linkvertise Directory — Minimal Link Listing Site',
@@ -29,6 +30,7 @@ export default function RootLayout({
           </main>
           <Footer />
           <FeedbackModal />
+          <SecurityShield />
         </FeedbackProvider>
       </body>
     </html>

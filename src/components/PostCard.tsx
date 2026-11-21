@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { ExternalLink, Calendar, ImageOff } from 'lucide-react';
 import { Post } from '@/types/post';
+import ProtectedImage from '@/components/ProtectedImage';
 
 interface PostCardProps {
   post: Post;
@@ -31,22 +31,25 @@ export default function PostCard({ post, priority = false }: PostCardProps) {
   const altText = post.previewImageAlt || post.title;
 
   return (
-    <article className="group relative flex flex-col overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/70 transition-all duration-200 hover:-translate-y-1 hover:border-neutral-700 hover:bg-neutral-900 hover:shadow-xl hover:shadow-black/50 focus-within:ring-2 focus-within:ring-neutral-400">
+    <article
+      data-component="post-card"
+      className="group relative flex flex-col overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900/70 transition-all duration-200 hover:-translate-y-1 hover:border-neutral-700 hover:bg-neutral-900 hover:shadow-xl hover:shadow-black/50 focus-within:ring-2 focus-within:ring-neutral-400"
+    >
       <Link
         href={`/post/${postSlug}`}
         className="flex flex-col h-full focus:outline-none"
         aria-label={`View details for ${post.title}`}
       >
-        {/* Preview Image with 16:10 aspect ratio */}
+        {/* Preview Image with 16:10 aspect ratio and anti-download protection */}
         <div className="relative aspect-[16/10] w-full overflow-hidden bg-neutral-950">
           {!imgError && post.previewImage ? (
-            <Image
+            <ProtectedImage
               src={post.previewImage}
               alt={altText}
               fill
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, (max-width: 1280px) 33vw, 25vw"
               priority={priority}
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              className="transition-transform duration-300 group-hover:scale-105"
               onError={() => setImgError(true)}
             />
           ) : (
@@ -60,7 +63,7 @@ export default function PostCard({ post, priority = false }: PostCardProps) {
           )}
 
           {/* Uppercase Tag Pill */}
-          <div className="absolute top-2.5 left-2.5">
+          <div className="absolute top-2.5 left-2.5 z-20 pointer-events-none">
             <span className="inline-flex items-center gap-1 rounded bg-black/75 px-2 py-0.5 text-[11px] font-semibold text-neutral-200 backdrop-blur-sm border border-white/10 uppercase">
               {tagDisplay}
             </span>

@@ -44,3 +44,26 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #404040;
 }
+
+/* Anti-download & Image Security rules */
+img, [data-protected="image"] {
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
+/* Print protection: hide images and show protection notice if printed to PDF */
+@media print {
+  img, [data-protected="image"], [data-component="external-link-button"] {
+    display: none !important;
+  }
+  body::before {
+    content: "🔒 Content Protected. Printing and PDF export are disabled.";
+    display: block;
+    font-size: 18px;
+    font-weight: bold;
+    color: #000;
+    padding: 30px;
+    text-align: center;
+  }
+}
