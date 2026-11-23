@@ -25,12 +25,12 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
 
   if (!post) {
     return {
-      title: 'Post Not Found — Linkvertise Directory',
+      title: 'Post Not Found — xoohub',
     };
   }
 
   return {
-    title: `${post.title} — Linkvertise Directory`,
+    title: `${post.title} — xoohub`,
     description: post.description || `View external access and details for ${post.title}.`,
     openGraph: {
       title: post.title,

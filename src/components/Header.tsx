@@ -15,10 +15,10 @@ export default function Header() {
         <Link
           href="/"
           className="min-h-[44px] min-w-[44px] flex items-center gap-2 group text-sm font-semibold tracking-tight text-white max-w-[70%] sm:max-w-none truncate"
-          aria-label="Linkvertise Directory Home"
+          aria-label="xoohub Home"
         >
           <span className="font-bold tracking-tight text-white text-base truncate">
-            Linkvertise Directory
+            xoohub
           </span>
         </Link>
 

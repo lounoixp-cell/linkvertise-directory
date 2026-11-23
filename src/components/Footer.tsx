@@ -8,7 +8,7 @@ export default function Footer() {
   return (
     <footer className="mt-20 border-t border-neutral-900 bg-black text-xs text-neutral-500">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <p>&copy; {new Date().getFullYear()} Linkvertise Directory. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} xoohub. All rights reserved.</p>
         <div className="flex items-center gap-4">
           <button
             type="button"

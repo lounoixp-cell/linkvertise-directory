@@ -24,12 +24,12 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   if (!/^\d+$/.test(params.pageNumber)) {
-    return { title: 'Page Not Found — Linkvertise Directory' };
+    return { title: 'Page Not Found — xoohub' };
   }
   const pageNum = Number(params.pageNumber);
   return {
-    title: `Linkvertise Directory — Page ${pageNum}`,
-    description: `Page ${pageNum} of Linkvertise Directory.`,
+    title: `xoohub — Page ${pageNum}`,
+    description: `Page ${pageNum} of xoohub.`,
     alternates: {
       canonical: pageNum === 1 ? '/' : `/page/${pageNum}`,
     },

@@ -39,7 +39,7 @@ export function formatFeedbackEmail(payload: FeedbackEmailPayload): FormattedFee
     text: bodyText,
     body: bodyText,
     to: process.env.FEEDBACK_EMAIL || 'feedback@example.com',
-    from: process.env.FEEDBACK_FROM_EMAIL || 'Linkvertise Directory <onboarding@resend.dev>',
+    from: process.env.FEEDBACK_FROM_EMAIL || 'xoohub <onboarding@resend.dev>',
   };
 }
 

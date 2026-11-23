@@ -7,7 +7,7 @@ import FeedbackModal from '@/components/FeedbackModal';
 import SecurityShield from '@/components/SecurityShield';
 
 export const metadata: Metadata = {
-  title: 'Linkvertise Directory — Minimal Link Listing Site',
+  title: 'xoohub — Minimal Link Listing Site',
   description: 'A minimalist, fast-loading, content-first directory for curated web links and resources.',
   robots: {
     index: true,
