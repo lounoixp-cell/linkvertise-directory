@@ -26,7 +26,6 @@ export default function PostCard({ post, priority = false }: PostCardProps) {
   const [imgError, setImgError] = useState(false);
 
   const formattedDate = formatDateSafely(post.publishedAt);
-  const tagDisplay = (post.tag || post.category || 'General').trim();
   const postSlug = post.slug || post.id;
   const altText = post.previewImageAlt || post.title;
 
@@ -61,13 +60,6 @@ export default function PostCard({ post, priority = false }: PostCardProps) {
               <span className="text-xs font-medium">Image Preview Unavailable</span>
             </div>
           )}
-
-          {/* Uppercase Tag Pill */}
-          <div className="absolute top-2.5 left-2.5 z-20 pointer-events-none">
-            <span className="inline-flex items-center gap-1 rounded bg-black/75 px-2 py-0.5 text-[11px] font-semibold text-neutral-200 backdrop-blur-sm border border-white/10 uppercase">
-              {tagDisplay}
-            </span>
-          </div>
         </div>
 
         {/* Content Area */}

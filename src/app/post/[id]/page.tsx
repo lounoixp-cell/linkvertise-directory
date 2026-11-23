@@ -108,7 +108,7 @@ export default async function PostDetailPage({ params }: PostPageProps) {
 
         {/* By ADMIN / Author line */}
         <div className="mt-2 text-xs sm:text-sm font-medium text-neutral-400">
-          By <span className="text-red-500 font-bold uppercase">{post.tag || 'ADMIN'}</span>
+          By <span className="text-red-500 font-bold uppercase">ADMIN</span>
         </div>
 
         {/* Direct Link */}
