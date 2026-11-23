@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ExternalLink, Calendar, ImageOff } from 'lucide-react';
+import { Calendar, ImageOff } from 'lucide-react';
 import { Post } from '@/types/post';
 import ProtectedImage from '@/components/ProtectedImage';
 
@@ -68,13 +68,6 @@ export default function PostCard({ post, priority = false }: PostCardProps) {
             <h2 className="text-sm font-bold text-neutral-100 group-hover:text-neutral-300 line-clamp-2 break-words transition-colors leading-snug">
               {post.title}
             </h2>
-
-            <div className="mt-2.5 flex items-center gap-1.5 text-xs text-neutral-400">
-              <ExternalLink className="h-3.5 w-3.5 text-neutral-500 shrink-0" />
-              <span className="truncate max-w-[200px]" title={post.destinationDomain}>
-                Destination: <span className="text-neutral-300 font-medium">{post.destinationDomain}</span>
-              </span>
-            </div>
           </div>
 
           <div className="mt-4 pt-3 border-t border-neutral-800 flex items-center justify-between text-[11px] text-neutral-500">
