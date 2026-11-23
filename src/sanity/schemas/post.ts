@@ -31,10 +31,10 @@ export const postSchema = defineType({
     }),
     defineField({
       name: 'tag',
-      title: 'Tag / Category',
+      title: 'Tag (Optional)',
       type: 'string',
-      description: 'Display tag on the card (e.g. Photoset, Cosplay, Studio, Video)',
-      validation: (Rule) => Rule.required().max(50),
+      description: 'Optional internal tag/note',
+      validation: (Rule) => Rule.max(50),
     }),
     defineField({
       name: 'previewImage',

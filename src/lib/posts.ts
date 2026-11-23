@@ -366,11 +366,12 @@ export async function getAllSortedPosts(): Promise<Post[]> {
         tags: ['post'],
         revalidate: 60,
       });
-      if (docs && docs.length > 0) {
+      if (Array.isArray(docs)) {
         return docs.map(mapSanityPostToPost);
       }
     } catch (err) {
-      console.warn('Sanity fetch failed in getAllSortedPosts, falling back to DEMO_POSTS:', err);
+      console.warn('Sanity fetch failed in getAllSortedPosts:', err);
+      return [];
     }
   }
 
@@ -379,7 +380,7 @@ export async function getAllSortedPosts(): Promise<Post[]> {
 }
 
 /**
- * Retrieve paginated posts (Sanity with graceful fallback to DEMO_POSTS)
+ * Retrieve paginated posts (Sanity with graceful fallback to DEMO_POSTS when unconfigured)
  */
 export async function getPaginatedPosts(
   page: number = 1,
@@ -399,10 +400,10 @@ export async function getPaginatedPosts(
         revalidate: 60,
       });
 
-      if (result && Array.isArray(result.items) && result.totalItems >= 0) {
+      if (result && Array.isArray(result.items)) {
         const items = result.items.map(mapSanityPostToPost);
-        const totalItems = result.totalItems;
-        const totalPages = Math.ceil(totalItems / safePageSize) || 1;
+        const totalItems = result.totalItems || 0;
+        const totalPages = Math.max(1, Math.ceil(totalItems / safePageSize));
 
         return {
           items,
@@ -415,7 +416,16 @@ export async function getPaginatedPosts(
         };
       }
     } catch (err) {
-      console.warn('Sanity fetch failed in getPaginatedPosts, falling back to DEMO_POSTS:', err);
+      console.warn('Sanity fetch failed in getPaginatedPosts:', err);
+      return {
+        items: [],
+        totalItems: 0,
+        currentPage: safePage,
+        totalPages: 1,
+        pageSize: safePageSize,
+        hasNextPage: false,
+        hasPrevPage: false,
+      };
     }
   }
 
@@ -438,7 +448,7 @@ export async function getPaginatedPosts(
 }
 
 /**
- * Retrieve single post by slug (Sanity with fallback to DEMO_POSTS)
+ * Retrieve single post by slug (Sanity with fallback to DEMO_POSTS when unconfigured)
  */
 export async function getPostBySlug(slug: string): Promise<Post | null> {
   if (isSanityConfigured) {
@@ -452,8 +462,10 @@ export async function getPostBySlug(slug: string): Promise<Post | null> {
       if (doc) {
         return mapSanityPostToPost(doc);
       }
+      return null;
     } catch (err) {
-      console.warn('Sanity fetch failed in getPostBySlug, falling back to DEMO_POSTS:', err);
+      console.warn('Sanity fetch failed in getPostBySlug:', err);
+      return null;
     }
   }
 
@@ -516,8 +528,10 @@ export async function getAdjacentPosts(currentSlug: string): Promise<{
 
         return { prevPost: null, nextPost: null };
       }
+      return { prevPost: null, nextPost: null };
     } catch (err) {
-      console.warn('Sanity fetch failed in getAdjacentPosts, falling back to DEMO_POSTS:', err);
+      console.warn('Sanity fetch failed in getAdjacentPosts:', err);
+      return { prevPost: null, nextPost: null };
     }
   }
 
