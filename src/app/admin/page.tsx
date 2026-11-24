@@ -38,38 +38,78 @@ export default function AdminPage() {
 
   // UI state
   const [loading, setLoading] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [posts, setPosts] = useState<SanityPostItem[]>([]);
   const [fetchingPosts, setFetchingPosts] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem('xoohub_admin_key');
-    if (saved) {
-      setAdminKey(saved);
-      setIsAuthenticated(true);
-      fetchPosts(saved);
+    // Purge any stored admin keys to guarantee admin NEVER opens automatically without password
+    try {
+      localStorage.removeItem('xoohub_admin_key');
+      sessionStorage.removeItem('xoohub_admin_key');
+    } catch {
+      // ignore
     }
+    setIsAuthenticated(false);
+    setAdminKey('');
   }, []);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (keyInput.trim()) {
-      localStorage.setItem('xoohub_admin_key', keyInput.trim());
-      setAdminKey(keyInput.trim());
-      setIsAuthenticated(true);
-      fetchPosts(keyInput.trim());
+    const candidate = keyInput.trim();
+    if (!candidate) return;
+
+    setLoginLoading(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch('/api/admin/post', {
+        headers: { Authorization: `Bearer ${candidate}` },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setAdminKey(candidate);
+        setIsAuthenticated(true);
+        setPosts(data);
+        setMessage(null);
+      } else if (res.status === 401) {
+        setIsAuthenticated(false);
+        setMessage({ type: 'error', text: 'Invalid passcode. Please enter the correct admin key.' });
+      } else if (res.status === 429) {
+        const data = await res.json().catch(() => ({}));
+        setIsAuthenticated(false);
+        setMessage({ type: 'error', text: data.error || 'Too many attempts. Access temporarily locked.' });
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setIsAuthenticated(false);
+        setMessage({ type: 'error', text: data.error || 'Authentication failed. Please check your passcode.' });
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Network error. Could not connect to CMS server.' });
+    } finally {
+      setLoginLoading(false);
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('xoohub_admin_key');
+    try {
+      localStorage.removeItem('xoohub_admin_key');
+      sessionStorage.removeItem('xoohub_admin_key');
+    } catch {
+      // ignore
+    }
     setAdminKey('');
+    setKeyInput('');
     setIsAuthenticated(false);
     setPosts([]);
+    setMessage(null);
   };
 
   const fetchPosts = async (key: string) => {
+    if (!key) return;
     setFetchingPosts(true);
     try {
       const res = await fetch('/api/admin/post', {
@@ -370,9 +410,17 @@ export default function AdminPage() {
 
             <button
               type="submit"
-              className="w-full rounded-lg bg-red-600 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-red-500"
+              disabled={loginLoading}
+              className="w-full rounded-lg bg-red-600 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              Sign In to CMS
+              {loginLoading ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span>Verifying Passcode...</span>
+                </>
+              ) : (
+                'Sign In to CMS'
+              )}
             </button>
           </form>
 
