@@ -34,20 +34,39 @@ export default function RootLayout({
           <SecurityShield />
         </FeedbackProvider>
 
-        {/* Linkvertise Full Script Monetization */}
+        {/* Linkvertise Full Script Monetization
+            Strategy: load the library, then poll until window.linkvertise is defined before
+            calling it. This avoids the DOMContentLoaded race condition in Next.js SSG/SSR
+            where the event fires before the afterInteractive script has a chance to load.
+            Once the library is ready we call it AND dispatch DOMContentLoaded so the
+            script's internal async link-scanner runs immediately on the current DOM.
+        */}
         <Script
+          id="linkvertise-script"
           src="https://publisher.linkvertise.com/cdn/linkvertise.js"
           strategy="afterInteractive"
         />
         <Script id="linkvertise-init" strategy="afterInteractive">
           {`
-            function runLinkvertise() {
-              if (typeof window.linkvertise === 'function') {
-                window.linkvertise(964094, { whitelist: [], blacklist: ["xoohub.vercel.app"] });
+            (function() {
+              var PUBLISHER_ID = 964094;
+              var OPTIONS = { whitelist: [], blacklist: ["xoohub.vercel.app"] };
+
+              function activateLinkvertise() {
+                if (typeof window.linkvertise !== 'function') return false;
+                window.linkvertise(PUBLISHER_ID, OPTIONS);
+                try { document.dispatchEvent(new Event('DOMContentLoaded')); } catch(e) {}
+                return true;
               }
-            }
-            runLinkvertise();
-            window.addEventListener('load', runLinkvertise);
+
+              // Poll until the library script is ready (max 5 seconds, every 100ms).
+              var attempts = 0;
+              function poll() {
+                if (activateLinkvertise()) return;
+                if (++attempts < 50) setTimeout(poll, 100);
+              }
+              poll();
+            })();
           `}
         </Script>
       </body>

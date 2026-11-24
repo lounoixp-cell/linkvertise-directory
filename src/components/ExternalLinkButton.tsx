@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { LockOpen } from 'lucide-react';
 import { validateExternalUrl } from '@/lib/url-shield';
 
@@ -13,16 +13,39 @@ interface ExternalLinkButtonProps {
 export default function ExternalLinkButton({ externalUrl }: ExternalLinkButtonProps) {
   const validation = validateExternalUrl(externalUrl);
   const targetUrl = validation.isValid && validation.sanitizedUrl ? validation.sanitizedUrl : '#';
+  const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // Trigger Linkvertise Full Script DOM conversion on mount/route change
-      try {
-        document.dispatchEvent(new Event('DOMContentLoaded'));
-      } catch {
-        // ignore
+    if (typeof window === 'undefined') return;
+
+    let attempts = 0;
+    const maxAttempts = 30; // 30 × 150ms = 4.5s max wait
+
+    function tryActivate(): boolean {
+      if (typeof (window as unknown as Record<string, unknown>).linkvertise !== 'function') return false;
+      const lv = (window as unknown as Record<string, unknown>).linkvertise as (id: number, opts: object) => void;
+      lv(964094, { whitelist: [], blacklist: ['xoohub.vercel.app'] });
+      // Fire DOMContentLoaded so the script's internal async handler processes the current DOM.
+      try { document.dispatchEvent(new Event('DOMContentLoaded')); } catch { /* ignore */ }
+      return true;
+    }
+
+    function poll() {
+      if (tryActivate()) return;
+      attempts++;
+      if (attempts < maxAttempts) {
+        pollRef.current = setTimeout(poll, 150);
       }
     }
+
+    // Try immediately — if the library already loaded (e.g. on soft nav), this works instantly.
+    if (!tryActivate()) {
+      pollRef.current = setTimeout(poll, 150);
+    }
+
+    return () => {
+      if (pollRef.current) clearTimeout(pollRef.current);
+    };
   }, [targetUrl]);
 
   const preventCopyAction = (e: React.SyntheticEvent) => {
