@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import './globals.css';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -32,6 +33,23 @@ export default function RootLayout({
           <FeedbackModal />
           <SecurityShield />
         </FeedbackProvider>
+
+        {/* Linkvertise Full Script Monetization */}
+        <Script
+          src="https://publisher.linkvertise.com/cdn/linkvertise.js"
+          strategy="afterInteractive"
+        />
+        <Script id="linkvertise-init" strategy="afterInteractive">
+          {`
+            function runLinkvertise() {
+              if (typeof window.linkvertise === 'function') {
+                window.linkvertise(964094, { whitelist: [], blacklist: ["xoohub.vercel.app"] });
+              }
+            }
+            runLinkvertise();
+            window.addEventListener('load', runLinkvertise);
+          `}
+        </Script>
       </body>
     </html>
   );
