@@ -6,6 +6,8 @@ export interface Post {
   previewImage: string;     // Image URL or Sanity Image object
   previewImageAlt?: string; // Accessibility alt text
   gallery?: string[];       // Slideshow images (optional)
+  imageCount?: string | number; // Number of images in set/pack (optional)
+  videoCount?: string | number; // Number of videos in set/pack (optional)
   externalUrl: string;      // Outbound destination URL
   destinationDomain: string;// Clean domain for display (e.g. "linkvertise.com")
   publishedAt: string;      // ISO datetime string

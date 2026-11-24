@@ -33,6 +33,8 @@ export const paginatedPostsQuery = groq`{
       status,
       sortOrder,
       description,
+      imageCount,
+      videoCount,
       "gallery": select(
         defined(gallery[0].asset) => gallery[].asset->url,
         defined(gallery) => gallery,
@@ -71,6 +73,8 @@ export const postBySlugQuery = groq`*[_type == "post" && slug.current == $slug &
   status,
   sortOrder,
   description,
+  imageCount,
+  videoCount,
   "gallery": select(
     defined(gallery[0].asset) => gallery[].asset->url,
     defined(gallery) => gallery,
@@ -110,6 +114,8 @@ export const adjacentPostsQuery = groq`{
     status,
     sortOrder,
     description,
+    imageCount,
+    videoCount,
     "gallery": select(
       defined(gallery[0].asset) => gallery[].asset->url,
       defined(gallery) => gallery,
@@ -160,5 +166,7 @@ export const allSortedPostsQuery = groq`*[_type == "post" && !(_id in path("draf
     publishedAt,
     status,
     sortOrder,
-    description
+    description,
+    imageCount,
+    videoCount
   }`;

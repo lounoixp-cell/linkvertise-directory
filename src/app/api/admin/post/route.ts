@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { title, externalUrl, previewImage, description, sortOrder, gallery } = body;
+    const { title, externalUrl, previewImage, description, sortOrder, gallery, imageCount, videoCount } = body;
 
     // Strict input validation
     if (!title || typeof title !== 'string' || title.trim().length === 0 || title.length > 200) {
@@ -175,6 +175,9 @@ export async function POST(req: NextRequest) {
       .replace(/[\s_-]+/g, '-')
       .replace(/^-+|-+$/g, '');
 
+    const safeImageCount = imageCount && typeof imageCount === 'string' ? imageCount.trim().slice(0, 30) : typeof imageCount === 'number' ? String(imageCount) : undefined;
+    const safeVideoCount = videoCount && typeof videoCount === 'string' ? videoCount.trim().slice(0, 30) : typeof videoCount === 'number' ? String(videoCount) : undefined;
+
     const newDoc = {
       _type: 'post',
       title: title.trim(),
@@ -184,6 +187,8 @@ export async function POST(req: NextRequest) {
       },
       previewImage: resolvedImage,
       gallery: resolvedGallery && resolvedGallery.length > 0 ? resolvedGallery : undefined,
+      imageCount: safeImageCount || undefined,
+      videoCount: safeVideoCount || undefined,
       externalUrl: externalUrl.trim(),
       publishedAt: new Date().toISOString(),
       status: 'active',
@@ -254,7 +259,7 @@ export async function PUT(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { id, slug, title, externalUrl, previewImage, description, sortOrder, gallery } = body;
+    const { id, slug, title, externalUrl, previewImage, description, sortOrder, gallery, imageCount, videoCount } = body;
 
     if (!id || typeof id !== 'string') {
       return NextResponse.json(
@@ -300,10 +305,15 @@ export async function PUT(req: NextRequest) {
       }
     }
 
+    const safeImageCount = imageCount && typeof imageCount === 'string' ? imageCount.trim().slice(0, 30) : typeof imageCount === 'number' ? String(imageCount) : '';
+    const safeVideoCount = videoCount && typeof videoCount === 'string' ? videoCount.trim().slice(0, 30) : typeof videoCount === 'number' ? String(videoCount) : '';
+
     const setFields: Record<string, any> = {
       title: title.trim(),
       previewImage: resolvedImage,
       gallery: resolvedGallery && resolvedGallery.length > 0 ? resolvedGallery : [],
+      imageCount: safeImageCount,
+      videoCount: safeVideoCount,
       externalUrl: externalUrl.trim(),
       sortOrder: safeSortOrder,
       description: description && typeof description === 'string' ? description.trim().slice(0, 1000) : '',

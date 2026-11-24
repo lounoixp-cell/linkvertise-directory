@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { Calendar, ChevronLeft, ChevronRight, ImageOff, Layers } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Image as ImageIcon, Video, ImageOff, Layers } from 'lucide-react';
 import { Post } from '@/types/post';
 import ProtectedImage from '@/components/ProtectedImage';
 
@@ -32,6 +32,12 @@ export default function PostCard({ post, priority = false }: PostCardProps) {
   const formattedDate = formatDateSafely(post.publishedAt);
   const postSlug = post.slug || post.id;
   const altText = post.previewImageAlt || post.title;
+
+  // Media counters
+  const rawImg = post.imageCount !== undefined && post.imageCount !== null ? String(post.imageCount).trim() : '';
+  const rawVid = post.videoCount !== undefined && post.videoCount !== null ? String(post.videoCount).trim() : '';
+  const hasImageCount = rawImg.length > 0;
+  const hasVideoCount = rawVid.length > 0;
 
   // Resolve gallery images
   const images: string[] =
@@ -226,15 +232,35 @@ export default function PostCard({ post, priority = false }: PostCardProps) {
 
       {/* Content Area */}
       <div className="flex flex-1 flex-col justify-between p-4">
-        <Link
-          href={`/post/${postSlug}`}
-          className="group/title focus:outline-none"
-          aria-label={`Read ${post.title}`}
-        >
-          <h2 className="text-sm font-bold text-neutral-100 group-hover/title:text-red-400 group-hover/card:text-neutral-200 line-clamp-2 break-words transition-colors leading-snug">
-            {post.title}
-          </h2>
-        </Link>
+        <div>
+          <Link
+            href={`/post/${postSlug}`}
+            className="group/title focus:outline-none"
+            aria-label={`Read ${post.title}`}
+          >
+            <h2 className="text-sm font-bold text-neutral-100 group-hover/title:text-red-400 group-hover/card:text-neutral-200 line-clamp-2 break-words transition-colors leading-snug">
+              {post.title}
+            </h2>
+          </Link>
+
+          {/* Media Counters (Image & Video icons + counts) if configured in CMS */}
+          {(hasImageCount || hasVideoCount) && (
+            <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
+              {hasImageCount && (
+                <span className="inline-flex items-center gap-1 rounded-md bg-neutral-800/80 px-2 py-0.5 text-[11px] font-semibold text-neutral-300 border border-neutral-700/50 shadow-sm">
+                  <ImageIcon className="h-3 w-3 text-red-400 shrink-0" />
+                  <span>{rawImg}</span>
+                </span>
+              )}
+              {hasVideoCount && (
+                <span className="inline-flex items-center gap-1 rounded-md bg-neutral-800/80 px-2 py-0.5 text-[11px] font-semibold text-neutral-300 border border-neutral-700/50 shadow-sm">
+                  <Video className="h-3 w-3 text-red-400 shrink-0" />
+                  <span>{rawVid}</span>
+                </span>
+              )}
+            </div>
+          )}
+        </div>
 
         <div className="mt-4 pt-3 border-t border-neutral-800 flex items-center justify-between text-[11px] text-neutral-500">
           <time dateTime={post.publishedAt} className="flex items-center gap-1">

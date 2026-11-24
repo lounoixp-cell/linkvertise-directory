@@ -283,6 +283,8 @@ interface SanityPostItem {
   status: 'active' | 'archived';
   sortOrder: number;
   description?: string;
+  imageCount?: string | number;
+  videoCount?: string | number;
 }
 
 function extractDomain(urlStr: string): string {
@@ -337,6 +339,8 @@ function mapSanityPostToPost(doc: SanityPostItem): Post {
     previewImage: imageUrl,
     previewImageAlt: doc.previewImage?.alt || (typeof doc.previewImage === 'object' ? doc.previewImage?.alt : undefined) || `${doc.title} preview image`,
     gallery: finalGallery,
+    imageCount: doc.imageCount !== undefined && doc.imageCount !== null && String(doc.imageCount).trim() !== '' ? doc.imageCount : undefined,
+    videoCount: doc.videoCount !== undefined && doc.videoCount !== null && String(doc.videoCount).trim() !== '' ? doc.videoCount : undefined,
     externalUrl: doc.externalUrl,
     destinationDomain: extractDomain(doc.externalUrl),
     publishedAt: doc.publishedAt,

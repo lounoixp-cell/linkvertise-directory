@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Image as ImageIcon, Video } from 'lucide-react';
 import { getPostByIdOrSlug, getAdjacentPosts, getAllSortedPosts } from '@/lib/posts';
 import ExternalLinkButton from '@/components/ExternalLinkButton';
 import PostNavigation from '@/components/PostNavigation';
@@ -100,8 +100,26 @@ export default async function PostDetailPage({ params }: PostPageProps) {
           {post.title}
         </h1>
 
+        {/* Media Counts if provided in CMS */}
+        {((post.imageCount && String(post.imageCount).trim()) || (post.videoCount && String(post.videoCount).trim())) && (
+          <div className="mt-3 flex items-center gap-2.5 flex-wrap">
+            {post.imageCount && String(post.imageCount).trim() && (
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-neutral-800/80 px-3 py-1 text-xs font-semibold text-neutral-200 border border-neutral-700/60 shadow-sm">
+                <ImageIcon className="h-4 w-4 text-red-400" />
+                <span>{String(post.imageCount).trim()} Photos</span>
+              </span>
+            )}
+            {post.videoCount && String(post.videoCount).trim() && (
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-neutral-800/80 px-3 py-1 text-xs font-semibold text-neutral-200 border border-neutral-700/60 shadow-sm">
+                <Video className="h-4 w-4 text-red-400" />
+                <span>{String(post.videoCount).trim()} Videos</span>
+              </span>
+            )}
+          </div>
+        )}
+
         {/* By ADMIN / Author line */}
-        <div className="mt-2 text-xs sm:text-sm font-medium text-neutral-400">
+        <div className="mt-3 text-xs sm:text-sm font-medium text-neutral-400">
           By <span className="text-red-500 font-bold uppercase">ADMIN</span>
         </div>
 

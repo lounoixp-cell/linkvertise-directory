@@ -110,6 +110,18 @@ export const postSchema = defineType({
       validation: (Rule) => Rule.required().integer(),
     }),
     defineField({
+      name: 'imageCount',
+      title: 'Image Count (Optional)',
+      type: 'string',
+      description: 'Number of images/photos included in the pack (e.g. 24 or 50+)',
+    }),
+    defineField({
+      name: 'videoCount',
+      title: 'Video Count (Optional)',
+      type: 'string',
+      description: 'Number of videos included in the pack (e.g. 2 or 5)',
+    }),
+    defineField({
       name: 'description',
       title: 'Description (Optional)',
       type: 'text',

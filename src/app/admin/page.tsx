@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, Trash2, ExternalLink, Lock, CheckCircle2, AlertCircle, RefreshCw, Eye, Upload, Image as ImageIcon, X, Layers, Pencil } from 'lucide-react';
+import { Plus, Trash2, ExternalLink, Lock, CheckCircle2, AlertCircle, RefreshCw, Eye, Upload, Image as ImageIcon, Video, X, Layers, Pencil } from 'lucide-react';
 import { compressImageToWebP } from '@/lib/imageOptimizer';
 
 interface SanityPostItem {
@@ -15,6 +15,8 @@ interface SanityPostItem {
   sortOrder?: number;
   publishedAt?: string;
   description?: string;
+  imageCount?: string | number;
+  videoCount?: string | number;
 }
 
 export default function AdminPage() {
@@ -30,6 +32,8 @@ export default function AdminPage() {
   const [previewImage, setPreviewImage] = useState('');
   const [gallery, setGallery] = useState<string[]>([]);
   const [sortOrder, setSortOrder] = useState('1');
+  const [imageCount, setImageCount] = useState('');
+  const [videoCount, setVideoCount] = useState('');
   const [description, setDescription] = useState('');
 
   // UI state
@@ -192,6 +196,8 @@ export default function AdminPage() {
     }
     setGallery(postGallery);
     setSortOrder(String(post.sortOrder || 1));
+    setImageCount(post.imageCount !== undefined && post.imageCount !== null ? String(post.imageCount) : '');
+    setVideoCount(post.videoCount !== undefined && post.videoCount !== null ? String(post.videoCount) : '');
     setDescription(post.description || '');
     setMessage({
       type: 'success',
@@ -210,6 +216,8 @@ export default function AdminPage() {
     setExternalUrl('');
     setPreviewImage('');
     setGallery([]);
+    setImageCount('');
+    setVideoCount('');
     setDescription('');
     setSortOrder(String(posts.length + 1));
     setMessage(null);
@@ -247,6 +255,8 @@ export default function AdminPage() {
             previewImage: cover,
             gallery: finalGallery,
             sortOrder: Number(sortOrder) || 1,
+            imageCount: imageCount.trim() || undefined,
+            videoCount: videoCount.trim() || undefined,
             description,
           }),
         });
@@ -274,6 +284,8 @@ export default function AdminPage() {
             previewImage: cover,
             gallery: finalGallery,
             sortOrder: Number(sortOrder) || 1,
+            imageCount: imageCount.trim() || undefined,
+            videoCount: videoCount.trim() || undefined,
             description,
           }),
         });
@@ -286,6 +298,8 @@ export default function AdminPage() {
           setExternalUrl('');
           setPreviewImage('');
           setGallery([]);
+          setImageCount('');
+          setVideoCount('');
           setDescription('');
           setSortOrder(String(posts.length + 2));
           fetchPosts(adminKey);
@@ -618,7 +632,7 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-neutral-300">
                     Sort Order
@@ -631,6 +645,36 @@ export default function AdminPage() {
                     className="mt-1.5 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-white placeholder-neutral-600 focus:border-red-500 focus:outline-none"
                   />
                   <p className="mt-0.5 text-[10px] text-neutral-500">1 = First on page</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-neutral-300 flex items-center gap-1">
+                    <ImageIcon className="h-3 w-3 text-red-400" />
+                    <span>Images</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={imageCount}
+                    onChange={(e) => setImageCount(e.target.value)}
+                    placeholder="e.g. 24"
+                    className="mt-1.5 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-white placeholder-neutral-600 focus:border-red-500 focus:outline-none"
+                  />
+                  <p className="mt-0.5 text-[10px] text-neutral-500">Optional icon</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-neutral-300 flex items-center gap-1">
+                    <Video className="h-3 w-3 text-red-400" />
+                    <span>Videos</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={videoCount}
+                    onChange={(e) => setVideoCount(e.target.value)}
+                    placeholder="e.g. 2"
+                    className="mt-1.5 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-white placeholder-neutral-600 focus:border-red-500 focus:outline-none"
+                  />
+                  <p className="mt-0.5 text-[10px] text-neutral-500">Optional icon</p>
                 </div>
               </div>
 
@@ -770,6 +814,18 @@ export default function AdminPage() {
                             <span className="flex items-center gap-0.5 rounded bg-red-950/80 border border-red-800/40 px-1.5 py-0.5 text-[9px] font-medium text-red-400 shrink-0">
                               <Layers className="h-2.5 w-2.5" />
                               {post.gallery.length} photos
+                            </span>
+                          )}
+                          {post.imageCount && (
+                            <span className="flex items-center gap-1 rounded bg-neutral-800/80 px-1.5 py-0.5 text-[9px] text-neutral-300 shrink-0 border border-neutral-700/40">
+                              <ImageIcon className="h-2.5 w-2.5 text-red-400" />
+                              {post.imageCount}
+                            </span>
+                          )}
+                          {post.videoCount && (
+                            <span className="flex items-center gap-1 rounded bg-neutral-800/80 px-1.5 py-0.5 text-[9px] text-neutral-300 shrink-0 border border-neutral-700/40">
+                              <Video className="h-2.5 w-2.5 text-red-400" />
+                              {post.videoCount}
                             </span>
                           )}
                         </div>
