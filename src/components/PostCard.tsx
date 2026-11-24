@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import { Calendar, ChevronLeft, ChevronRight, Image as ImageIcon, Video, ImageOff, Layers } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Image as ImageIcon, Video, ImageOff } from 'lucide-react';
 import { Post } from '@/types/post';
 import ProtectedImage from '@/components/ProtectedImage';
 
@@ -182,14 +182,6 @@ export default function PostCard({ post, priority = false }: PostCardProps) {
         {/* Slideshow Controls (Rendered as siblings to Link, eliminating invalid DOM nesting) */}
         {hasSlideshow && (
           <>
-            {/* Top-Right Dynamic Counter Badge */}
-            <div className="absolute top-2.5 right-2.5 z-20 flex items-center gap-1 rounded-full bg-black/75 backdrop-blur-md border border-white/15 px-2.5 py-0.5 text-[10px] font-bold text-white shadow-lg pointer-events-none">
-              <Layers className="h-3 w-3 text-red-400" />
-              <span>
-                {currentSlide + 1} / {total}
-              </span>
-            </div>
-
             {/* Prev Chevron Button */}
             <button
               type="button"

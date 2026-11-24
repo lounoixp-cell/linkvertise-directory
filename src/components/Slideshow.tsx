@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { ChevronLeft, ChevronRight, ImageOff, Layers } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ImageOff } from 'lucide-react';
 import ProtectedImage from '@/components/ProtectedImage';
 
 interface SlideshowProps {
@@ -187,14 +187,6 @@ export default function Slideshow({ images, alt, priority = false }: SlideshowPr
         >
           <ChevronRight className="h-6 w-6" />
         </button>
-
-        {/* Top-Right Counter Badge */}
-        <div className="absolute top-3 right-3 z-30 flex items-center gap-1.5 rounded-full bg-black/75 backdrop-blur-md border border-white/15 px-3 py-1 text-xs font-bold text-white shadow-lg">
-          <Layers className="h-3.5 w-3.5 text-red-400" />
-          <span>
-            {currentIndex + 1} / {total}
-          </span>
-        </div>
 
         {/* Bottom Center Indicator Dots */}
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 rounded-full bg-black/60 backdrop-blur-md px-3 py-1.5 border border-white/15 shadow-lg">

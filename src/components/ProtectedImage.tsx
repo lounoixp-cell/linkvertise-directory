@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Image, { ImageProps } from 'next/image';
-import { triggerSecurityShield } from './SecurityShield';
 
 interface ProtectedImageProps extends Omit<ImageProps, 'draggable'> {
   containerClassName?: string;
@@ -19,7 +18,6 @@ export default function ProtectedImage({
   const handleBlockAction = (e: React.SyntheticEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    triggerSecurityShield('This file is secured. Right-click downloading is prohibited.');
     return false;
   };
 

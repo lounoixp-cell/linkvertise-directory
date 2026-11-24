@@ -53,7 +53,6 @@ export default function SecurityShield() {
       if (isImageOrProtected) {
         e.preventDefault();
         e.stopPropagation();
-        showToast('This file is secured. Right-click downloading is prohibited.');
       }
     };
 
