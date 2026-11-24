@@ -12,19 +12,22 @@ export const paginatedPostsQuery = groq`{
       title,
       "slug": slug.current,
       tag,
-      previewImage {
-        asset-> {
-          _id,
-          url,
-          metadata {
-            dimensions { width, height, aspectRatio },
-            lqip
-          }
+      "previewImage": select(
+        defined(previewImage.asset) => previewImage {
+          asset-> {
+            _id,
+            url,
+            metadata {
+              dimensions { width, height, aspectRatio },
+              lqip
+            }
+          },
+          alt,
+          hotspot,
+          crop
         },
-        alt,
-        hotspot,
-        crop
-      },
+        previewImage
+      ),
       externalUrl,
       publishedAt,
       status,
@@ -42,19 +45,22 @@ export const postBySlugQuery = groq`*[_type == "post" && slug.current == $slug &
   title,
   "slug": slug.current,
   tag,
-  previewImage {
-    asset-> {
-      _id,
-      url,
-      metadata {
-        dimensions { width, height, aspectRatio },
-        lqip
-      }
+  "previewImage": select(
+    defined(previewImage.asset) => previewImage {
+      asset-> {
+        _id,
+        url,
+        metadata {
+          dimensions { width, height, aspectRatio },
+          lqip
+        }
+      },
+      alt,
+      hotspot,
+      crop
     },
-    alt,
-    hotspot,
-    crop
-  },
+    previewImage
+  ),
   externalUrl,
   publishedAt,
   status,
@@ -73,19 +79,22 @@ export const adjacentPostsQuery = groq`{
     title,
     "slug": slug.current,
     tag,
-    previewImage {
-      asset-> {
-        _id,
-        url,
-        metadata {
-          dimensions { width, height, aspectRatio },
-          lqip
-        }
+    "previewImage": select(
+      defined(previewImage.asset) => previewImage {
+        asset-> {
+          _id,
+          url,
+          metadata {
+            dimensions { width, height, aspectRatio },
+            lqip
+          }
+        },
+        alt,
+        hotspot,
+        crop
       },
-      alt,
-      hotspot,
-      crop
-    },
+      previewImage
+    ),
     externalUrl,
     publishedAt,
     status,
@@ -116,19 +125,22 @@ export const allSortedPostsQuery = groq`*[_type == "post" && !(_id in path("draf
     title,
     "slug": slug.current,
     tag,
-    previewImage {
-      asset-> {
-        _id,
-        url,
-        metadata {
-          dimensions { width, height, aspectRatio },
-          lqip
-        }
+    "previewImage": select(
+      defined(previewImage.asset) => previewImage {
+        asset-> {
+          _id,
+          url,
+          metadata {
+            dimensions { width, height, aspectRatio },
+            lqip
+          }
+        },
+        alt,
+        hotspot,
+        crop
       },
-      alt,
-      hotspot,
-      crop
-    },
+      previewImage
+    ),
     externalUrl,
     publishedAt,
     status,
