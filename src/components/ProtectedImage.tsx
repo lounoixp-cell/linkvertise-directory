@@ -42,6 +42,7 @@ export default function ProtectedImage({
       <Image
         alt={alt}
         draggable={false}
+        unoptimized
         className={`pointer-events-none select-none object-cover ${className}`}
         {...imageProps}
       />

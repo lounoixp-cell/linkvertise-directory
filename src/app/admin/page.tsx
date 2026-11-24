@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, Trash2, ExternalLink, Lock, CheckCircle2, AlertCircle, RefreshCw, Eye } from 'lucide-react';
+import { Plus, Trash2, ExternalLink, Lock, CheckCircle2, AlertCircle, RefreshCw, Eye, Upload, Image as ImageIcon } from 'lucide-react';
 
 interface SanityPostItem {
   _id: string;
@@ -29,6 +29,7 @@ export default function AdminPage() {
 
   // UI state
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [posts, setPosts] = useState<SanityPostItem[]>([]);
   const [fetchingPosts, setFetchingPosts] = useState(false);
@@ -83,6 +84,40 @@ export default function AdminPage() {
       // ignore
     } finally {
       setFetchingPosts(false);
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    setMessage(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/admin/upload', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${adminKey}`,
+        },
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setPreviewImage(data.url);
+        setMessage({ type: 'success', text: 'Image uploaded to Sanity CDN successfully!' });
+      } else {
+        setMessage({ type: 'error', text: data.error || 'Failed to upload image' });
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Network error during image upload' });
+    } finally {
+      setUploadingImage(false);
+      e.target.value = '';
     }
   };
 
@@ -288,16 +323,63 @@ export default function AdminPage() {
 
               <div>
                 <label className="block text-xs font-medium text-neutral-300">
-                  Preview Image URL <span className="text-red-500">*</span>
+                  Preview Image <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="url"
-                  required
-                  value={previewImage}
-                  onChange={(e) => setPreviewImage(e.target.value)}
-                  placeholder="https://images.unsplash.com/..."
-                  className="mt-1.5 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-white placeholder-neutral-600 focus:border-red-500 focus:outline-none"
-                />
+                
+                {/* Upload or URL options */}
+                <div className="mt-1.5 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <label className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-dashed border-neutral-700 bg-neutral-950/60 px-3 py-2 text-xs font-medium text-neutral-300 hover:border-neutral-500 hover:text-white cursor-pointer transition">
+                      {uploadingImage ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 animate-spin text-red-500" />
+                          <span>Uploading to CDN...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4 text-neutral-400" />
+                          <span>Upload File from Device</span>
+                        </>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={uploadingImage}
+                        onChange={handleImageUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="relative">
+                    <input
+                      type="url"
+                      required
+                      value={previewImage}
+                      onChange={(e) => setPreviewImage(e.target.value)}
+                      placeholder="Or paste direct image URL (ImgBB, Imgur, CDN)..."
+                      className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs text-white placeholder-neutral-600 focus:border-red-500 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Thumbnail Live Preview */}
+                  {previewImage && (
+                    <div className="relative mt-2 aspect-[16/10] w-full overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={previewImage}
+                        alt="Preview"
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+                  <p className="text-[10px] text-neutral-500">
+                    Auto-resolves ImgBB, Imgur, and direct image links.
+                  </p>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

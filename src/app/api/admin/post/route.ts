@@ -122,6 +122,44 @@ function isSafeExternalUrl(urlStr: string): boolean {
   }
 }
 
+async function resolveDirectImageUrl(inputUrl: string): Promise<string> {
+  const trimmed = inputUrl.trim();
+  try {
+    const parsed = new URL(trimmed);
+    const hostname = parsed.hostname.toLowerCase();
+
+    // ImgBB sharing page (e.g., https://ibb.co/0VvjNd0G)
+    if (hostname === 'ibb.co' || hostname.endsWith('.ibb.co')) {
+      if (hostname !== 'i.ibb.co') {
+        const pageRes = await fetch(trimmed, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; xoohub/1.0)' },
+          signal: AbortSignal.timeout(4000),
+        }).catch(() => null);
+
+        if (pageRes && pageRes.ok) {
+          const html = await pageRes.text();
+          const match = html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i);
+          if (match && match[1]) {
+            return match[1].trim();
+          }
+        }
+      }
+    }
+
+    // Imgur page without file extension (e.g., https://imgur.com/abc1234)
+    if ((hostname === 'imgur.com' || hostname === 'www.imgur.com') && !parsed.pathname.includes('.')) {
+      const id = parsed.pathname.replace(/^\//, '');
+      if (id) {
+        return `https://i.imgur.com/${id}.jpg`;
+      }
+    }
+
+    return trimmed;
+  } catch {
+    return trimmed;
+  }
+}
+
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req);
   const rateLimit = checkRateLimit(ip);
@@ -218,6 +256,9 @@ export async function POST(req: NextRequest) {
 
     const safeSortOrder = Math.max(1, Math.min(999999, Math.floor(Number(sortOrder)) || 1));
 
+    // Automatically resolve sharing pages (e.g. ibb.co/XYZ) to direct image URLs
+    const resolvedImage = await resolveDirectImageUrl(previewImage);
+
     const slugCurrent = title
       .toLowerCase()
       .trim()
@@ -232,7 +273,7 @@ export async function POST(req: NextRequest) {
         _type: 'slug',
         current: slugCurrent || `post-${Date.now()}`,
       },
-      previewImage: previewImage.trim(),
+      previewImage: resolvedImage,
       externalUrl: externalUrl.trim(),
       publishedAt: new Date().toISOString(),
       status: 'active',
