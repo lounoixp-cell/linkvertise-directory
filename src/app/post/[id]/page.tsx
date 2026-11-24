@@ -12,6 +12,8 @@ interface PostPageProps {
   };
 }
 
+export const revalidate = 60; // Revalidate post detail page cache every 60 seconds
+
 export async function generateStaticParams() {
   const allPosts = await getAllSortedPosts();
   return allPosts.flatMap((post) => [
