@@ -1,21 +1,150 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath, revalidateTag } from 'next/cache';
+import crypto from 'crypto';
 
 const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || 'zj5cuk1g';
 const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET || 'production';
 const apiToken = process.env.SANITY_API_TOKEN;
-const adminKey = process.env.ADMIN_KEY || 'xoohub2026';
+const adminKey = process.env.ADMIN_KEY;
 
-function isAuthorized(req: NextRequest): boolean {
-  const authHeader = req.headers.get('authorization')?.replace('Bearer ', '');
-  const urlKey = req.nextUrl.searchParams.get('key');
-  return authHeader === adminKey || urlKey === adminKey;
+// Security response headers for administrative endpoints
+const SECURITY_HEADERS = {
+  'X-Robots-Tag': 'noindex, nofollow, noarchive, nosnippet',
+  'X-Content-Type-Options': 'nosniff',
+  'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+};
+
+// In-memory brute force protection: tracks failed auth attempts per IP
+interface RateLimitRecord {
+  attempts: number;
+  lockedUntil: number;
+}
+const authAttempts = new Map<string, RateLimitRecord>();
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+
+function getClientIp(req: NextRequest): string {
+  return (
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    req.headers.get('x-real-ip') ||
+    '127.0.0.1'
+  );
+}
+
+function checkRateLimit(ip: string): { allowed: boolean; remainingSec: number } {
+  const record = authAttempts.get(ip);
+  if (!record) return { allowed: true, remainingSec: 0 };
+
+  const now = Date.now();
+  if (record.lockedUntil > now) {
+    const remainingSec = Math.ceil((record.lockedUntil - now) / 1000);
+    return { allowed: false, remainingSec };
+  }
+
+  // Lockout expired; reset
+  if (record.lockedUntil > 0 && record.lockedUntil <= now) {
+    authAttempts.delete(ip);
+  }
+  return { allowed: true, remainingSec: 0 };
+}
+
+function recordFailedAttempt(ip: string) {
+  const now = Date.now();
+  const record = authAttempts.get(ip) || { attempts: 0, lockedUntil: 0 };
+  record.attempts += 1;
+
+  if (record.attempts >= MAX_FAILED_ATTEMPTS) {
+    record.lockedUntil = now + LOCKOUT_DURATION_MS;
+  }
+  authAttempts.set(ip, record);
+
+  // Prevent memory leaks
+  if (authAttempts.size > 2000) {
+    authAttempts.forEach((val, key) => {
+      if (val.lockedUntil <= now) authAttempts.delete(key);
+    });
+  }
+}
+
+function recordSuccessfulAttempt(ip: string) {
+  authAttempts.delete(ip);
+}
+
+/**
+ * Constant-time hash comparison to prevent timing attack side-channel leaks (CWE-208)
+ */
+function timingSafeCompare(candidate: string, secret: string): boolean {
+  if (!candidate || !secret) return false;
+  const hashCandidate = crypto.createHash('sha256').update(candidate).digest();
+  const hashSecret = crypto.createHash('sha256').update(secret).digest();
+  return crypto.timingSafeEqual(hashCandidate, hashSecret);
+}
+
+function isAuthorized(req: NextRequest): { authorized: boolean; reason?: string } {
+  // Fail-closed if server secret is unconfigured
+  if (!adminKey || adminKey.trim() === '') {
+    return { authorized: false, reason: 'ADMIN_KEY_NOT_CONFIGURED' };
+  }
+
+  const rawHeader = req.headers.get('authorization') || '';
+  const match = rawHeader.match(/^Bearer\s+(.+)$/i);
+  if (!match) {
+    return { authorized: false, reason: 'MISSING_BEARER_TOKEN' };
+  }
+
+  const candidateKey = match[1].trim();
+  const valid = timingSafeCompare(candidateKey, adminKey);
+  return { authorized: valid };
+}
+
+function isSafeExternalUrl(urlStr: string): boolean {
+  try {
+    const parsed = new URL(urlStr);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return false;
+    }
+    const hostname = parsed.hostname.toLowerCase();
+    // Prevent SSRF against loopback, metadata services, and internal nets
+    if (
+      hostname === 'localhost' ||
+      hostname === '127.0.0.1' ||
+      hostname === '0.0.0.0' ||
+      hostname === '::1' ||
+      hostname.endsWith('.internal') ||
+      hostname.endsWith('.local') ||
+      hostname === '169.254.169.254'
+    ) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function GET(req: NextRequest) {
-  if (!isAuthorized(req)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const ip = getClientIp(req);
+  const rateLimit = checkRateLimit(ip);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: `Too many failed attempts. Access locked for ${rateLimit.remainingSec}s.` },
+      { status: 429, headers: { ...SECURITY_HEADERS, 'Retry-After': String(rateLimit.remainingSec) } }
+    );
   }
+
+  const auth = isAuthorized(req);
+  if (!auth.authorized) {
+    recordFailedAttempt(ip);
+    if (auth.reason === 'ADMIN_KEY_NOT_CONFIGURED') {
+      return NextResponse.json(
+        { error: 'Server misconfiguration: ADMIN_KEY is not set.' },
+        { status: 500, headers: SECURITY_HEADERS }
+      );
+    }
+    return NextResponse.json({ error: 'Unauthorized: Invalid passcode.' }, { status: 401, headers: SECURITY_HEADERS });
+  }
+
+  recordSuccessfulAttempt(ip);
 
   try {
     const query = encodeURIComponent('*[_type == "post"] | order(sortOrder asc, publishedAt desc)');
@@ -28,27 +157,66 @@ export async function GET(req: NextRequest) {
     );
 
     const data = await res.json();
-    return NextResponse.json(data.result || []);
+    return NextResponse.json(data.result || [], { headers: SECURITY_HEADERS });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Failed to fetch posts' }, { status: 500 });
+    return NextResponse.json(
+      { error: err.message || 'Failed to fetch posts' },
+      { status: 500, headers: SECURITY_HEADERS }
+    );
   }
 }
 
 export async function POST(req: NextRequest) {
-  if (!isAuthorized(req)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const ip = getClientIp(req);
+  const rateLimit = checkRateLimit(ip);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: `Too many failed attempts. Access locked for ${rateLimit.remainingSec}s.` },
+      { status: 429, headers: { ...SECURITY_HEADERS, 'Retry-After': String(rateLimit.remainingSec) } }
+    );
   }
+
+  const auth = isAuthorized(req);
+  if (!auth.authorized) {
+    recordFailedAttempt(ip);
+    if (auth.reason === 'ADMIN_KEY_NOT_CONFIGURED') {
+      return NextResponse.json(
+        { error: 'Server misconfiguration: ADMIN_KEY is not set.' },
+        { status: 500, headers: SECURITY_HEADERS }
+      );
+    }
+    return NextResponse.json({ error: 'Unauthorized: Invalid passcode.' }, { status: 401, headers: SECURITY_HEADERS });
+  }
+
+  recordSuccessfulAttempt(ip);
 
   try {
     const body = await req.json();
     const { title, externalUrl, previewImage, description, sortOrder } = body;
 
-    if (!title || !externalUrl || !previewImage) {
+    // Strict input validation
+    if (!title || typeof title !== 'string' || title.trim().length === 0 || title.length > 200) {
       return NextResponse.json(
-        { error: 'Title, External URL, and Preview Image are required.' },
-        { status: 400 }
+        { error: 'Title is required (maximum 200 characters).' },
+        { status: 400, headers: SECURITY_HEADERS }
       );
     }
+
+    if (!externalUrl || typeof externalUrl !== 'string' || !isSafeExternalUrl(externalUrl.trim())) {
+      return NextResponse.json(
+        { error: 'A valid HTTP/HTTPS external URL is required.' },
+        { status: 400, headers: SECURITY_HEADERS }
+      );
+    }
+
+    if (!previewImage || typeof previewImage !== 'string' || !isSafeExternalUrl(previewImage.trim())) {
+      return NextResponse.json(
+        { error: 'A valid HTTP/HTTPS image URL is required.' },
+        { status: 400, headers: SECURITY_HEADERS }
+      );
+    }
+
+    const safeSortOrder = Math.max(1, Math.min(999999, Math.floor(Number(sortOrder)) || 1));
 
     const slugCurrent = title
       .toLowerCase()
@@ -68,8 +236,8 @@ export async function POST(req: NextRequest) {
       externalUrl: externalUrl.trim(),
       publishedAt: new Date().toISOString(),
       status: 'active',
-      sortOrder: Number(sortOrder) || 1,
-      description: description ? description.trim() : undefined,
+      sortOrder: safeSortOrder,
+      description: description && typeof description === 'string' ? description.trim().slice(0, 1000) : undefined,
     };
 
     const res = await fetch(
@@ -89,7 +257,7 @@ export async function POST(req: NextRequest) {
     if (result.error) {
       return NextResponse.json(
         { error: result.error.message || 'Sanity mutation error' },
-        { status: 400 }
+        { status: 400, headers: SECURITY_HEADERS }
       );
     }
 
@@ -97,21 +265,49 @@ export async function POST(req: NextRequest) {
     revalidatePath('/');
     revalidatePath(`/post/${slugCurrent}`);
 
-    return NextResponse.json({ success: true, document: result.results?.[0]?.document });
+    return NextResponse.json(
+      { success: true, document: result.results?.[0]?.document },
+      { headers: SECURITY_HEADERS }
+    );
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Failed to create post' }, { status: 500 });
+    return NextResponse.json(
+      { error: err.message || 'Failed to create post' },
+      { status: 500, headers: SECURITY_HEADERS }
+    );
   }
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!isAuthorized(req)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const ip = getClientIp(req);
+  const rateLimit = checkRateLimit(ip);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: `Too many failed attempts. Access locked for ${rateLimit.remainingSec}s.` },
+      { status: 429, headers: { ...SECURITY_HEADERS, 'Retry-After': String(rateLimit.remainingSec) } }
+    );
   }
+
+  const auth = isAuthorized(req);
+  if (!auth.authorized) {
+    recordFailedAttempt(ip);
+    if (auth.reason === 'ADMIN_KEY_NOT_CONFIGURED') {
+      return NextResponse.json(
+        { error: 'Server misconfiguration: ADMIN_KEY is not set.' },
+        { status: 500, headers: SECURITY_HEADERS }
+      );
+    }
+    return NextResponse.json({ error: 'Unauthorized: Invalid passcode.' }, { status: 401, headers: SECURITY_HEADERS });
+  }
+
+  recordSuccessfulAttempt(ip);
 
   try {
     const { id, slug } = await req.json();
-    if (!id) {
-      return NextResponse.json({ error: 'Document ID is required.' }, { status: 400 });
+    if (!id || typeof id !== 'string') {
+      return NextResponse.json(
+        { error: 'Valid document ID is required.' },
+        { status: 400, headers: SECURITY_HEADERS }
+      );
     }
 
     const res = await fetch(
@@ -130,12 +326,15 @@ export async function DELETE(req: NextRequest) {
 
     revalidateTag('post');
     revalidatePath('/');
-    if (slug) {
+    if (slug && typeof slug === 'string') {
       revalidatePath(`/post/${slug}`);
     }
 
-    return NextResponse.json({ success: true, result });
+    return NextResponse.json({ success: true, result }, { headers: SECURITY_HEADERS });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Failed to delete post' }, { status: 500 });
+    return NextResponse.json(
+      { error: err.message || 'Failed to delete post' },
+      { status: 500, headers: SECURITY_HEADERS }
+    );
   }
 }

@@ -70,7 +70,14 @@ export default function AdminPage() {
         setPosts(data);
       } else if (res.status === 401) {
         handleLogout();
-        setMessage({ type: 'error', text: 'Invalid Passcode. Please enter it again.' });
+        setMessage({ type: 'error', text: 'Invalid passcode. Please enter the correct admin key.' });
+      } else if (res.status === 429) {
+        const data = await res.json().catch(() => ({}));
+        handleLogout();
+        setMessage({ type: 'error', text: data.error || 'Too many attempts. Access temporarily locked.' });
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setMessage({ type: 'error', text: data.error || 'Failed to authenticate with CMS server.' });
       }
     } catch {
       // ignore
@@ -166,9 +173,10 @@ export default function AdminPage() {
                 id="passcode"
                 type="password"
                 required
+                autoComplete="current-password"
                 value={keyInput}
                 onChange={(e) => setKeyInput(e.target.value)}
-                placeholder="Default: xoohub2026"
+                placeholder="••••••••••••"
                 className="mt-1.5 w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3.5 py-2.5 text-sm text-white placeholder-neutral-600 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
               />
             </div>
