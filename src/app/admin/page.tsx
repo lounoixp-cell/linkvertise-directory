@@ -326,19 +326,22 @@ export default function AdminPage() {
                   Preview Image <span className="text-red-500">*</span>
                 </label>
                 
-                {/* Upload or URL options */}
+                {/* Upload to Sanity or URL options */}
                 <div className="mt-1.5 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <label className="flex-1 flex items-center justify-center gap-2 rounded-lg border border-dashed border-neutral-700 bg-neutral-950/60 px-3 py-2 text-xs font-medium text-neutral-300 hover:border-neutral-500 hover:text-white cursor-pointer transition">
+                  <div>
+                    <label className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-red-900/60 bg-red-950/20 px-4 py-3 text-xs font-medium text-red-200 hover:border-red-600 hover:bg-red-950/40 hover:text-white cursor-pointer transition">
                       {uploadingImage ? (
                         <>
                           <RefreshCw className="h-4 w-4 animate-spin text-red-500" />
-                          <span>Uploading to CDN...</span>
+                          <span>Uploading directly to Sanity CDN...</span>
                         </>
                       ) : (
                         <>
-                          <Upload className="h-4 w-4 text-neutral-400" />
-                          <span>Upload File from Device</span>
+                          <Upload className="h-4 w-4 text-red-400" />
+                          <div className="text-left">
+                            <span className="font-semibold text-white block">Upload Image to Sanity CMS</span>
+                            <span className="text-[10px] text-neutral-400 block">Saves directly into your Sanity project (no third-party hosting needed)</span>
+                          </div>
                         </>
                       )}
                       <input
@@ -357,27 +360,48 @@ export default function AdminPage() {
                       required
                       value={previewImage}
                       onChange={(e) => setPreviewImage(e.target.value)}
-                      placeholder="Or paste direct image URL (ImgBB, Imgur, CDN)..."
+                      placeholder="Or paste direct image URL (ImgBB, Imgur, Sanity CDN)..."
                       className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs text-white placeholder-neutral-600 focus:border-red-500 focus:outline-none"
                     />
                   </div>
 
-                  {/* Thumbnail Live Preview */}
+                  {/* Thumbnail Live Preview with Ambient Blurred Backdrop */}
                   {previewImage && (
-                    <div className="relative mt-2 aspect-[16/10] w-full overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={previewImage}
-                        alt="Preview"
-                        className="h-full w-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLElement).style.display = 'none';
-                        }}
-                      />
+                    <div className="mt-2 space-y-1">
+                      <div className="flex items-center justify-between text-[11px] text-neutral-400">
+                        <span>Card Preview:</span>
+                        <span className="text-[10px] text-emerald-400 font-medium">Uncropped with Ambient Backdrop</span>
+                      </div>
+                      <div className="relative aspect-[16/10] w-full overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950">
+                        {/* Layer 1: Ambient Blurred Backdrop */}
+                        <div aria-hidden="true" className="absolute inset-0 overflow-hidden pointer-events-none select-none">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={previewImage}
+                            alt=""
+                            className="h-full w-full object-cover scale-125 filter blur-xl opacity-60 brightness-75 select-none"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-black/25 backdrop-blur-sm" />
+                        </div>
+
+                        {/* Layer 2: Full Centered Image */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={previewImage}
+                          alt="Preview"
+                          className="relative z-[2] h-full w-full object-contain pointer-events-none select-none"
+                          onError={(e) => {
+                            (e.target as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                      </div>
                     </div>
                   )}
                   <p className="text-[10px] text-neutral-500">
-                    Auto-resolves ImgBB, Imgur, and direct image links.
+                    Supports portrait, square, and landscape images without cropping.
                   </p>
                 </div>
               </div>
@@ -482,12 +506,25 @@ export default function AdminPage() {
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       {/* Thumbnail */}
-                      <div className="h-14 w-20 shrink-0 overflow-hidden rounded-lg bg-neutral-950 border border-neutral-800">
+                      <div className="relative h-14 w-20 shrink-0 overflow-hidden rounded-lg bg-neutral-950 border border-neutral-800">
+                        {/* Layer 1: Ambient Blurred Backdrop */}
+                        <div aria-hidden="true" className="absolute inset-0 overflow-hidden pointer-events-none select-none">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={imgUrl}
+                            alt=""
+                            className="h-full w-full object-cover scale-125 filter blur-sm opacity-50 brightness-75 select-none"
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                        </div>
+                        {/* Layer 2: Full Centered Image */}
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={imgUrl}
                           alt={post.title}
-                          className="h-full w-full object-cover"
+                          className="relative z-[2] h-full w-full object-contain pointer-events-none select-none"
                         />
                       </div>
 
