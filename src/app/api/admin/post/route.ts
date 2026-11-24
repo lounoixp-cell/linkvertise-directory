@@ -333,6 +333,135 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function PUT(req: NextRequest) {
+  const ip = getClientIp(req);
+  const rateLimit = checkRateLimit(ip);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: `Too many failed attempts. Access locked for ${rateLimit.remainingSec}s.` },
+      { status: 429, headers: { ...SECURITY_HEADERS, 'Retry-After': String(rateLimit.remainingSec) } }
+    );
+  }
+
+  const auth = isAuthorized(req);
+  if (!auth.authorized) {
+    recordFailedAttempt(ip);
+    if (auth.reason === 'ADMIN_KEY_NOT_CONFIGURED') {
+      return NextResponse.json(
+        { error: 'Server misconfiguration: ADMIN_KEY is not set.' },
+        { status: 500, headers: SECURITY_HEADERS }
+      );
+    }
+    return NextResponse.json({ error: 'Unauthorized: Invalid passcode.' }, { status: 401, headers: SECURITY_HEADERS });
+  }
+
+  recordSuccessfulAttempt(ip);
+
+  try {
+    const body = await req.json();
+    const { id, slug, title, externalUrl, previewImage, description, sortOrder, gallery } = body;
+
+    if (!id || typeof id !== 'string') {
+      return NextResponse.json(
+        { error: 'Valid document ID is required for updating.' },
+        { status: 400, headers: SECURITY_HEADERS }
+      );
+    }
+
+    if (!title || typeof title !== 'string' || title.trim().length === 0 || title.length > 200) {
+      return NextResponse.json(
+        { error: 'Title is required (maximum 200 characters).' },
+        { status: 400, headers: SECURITY_HEADERS }
+      );
+    }
+
+    if (!externalUrl || typeof externalUrl !== 'string' || !isSafeExternalUrl(externalUrl.trim())) {
+      return NextResponse.json(
+        { error: 'A valid HTTP/HTTPS external URL is required.' },
+        { status: 400, headers: SECURITY_HEADERS }
+      );
+    }
+
+    if (!previewImage || typeof previewImage !== 'string' || !isSafeExternalUrl(previewImage.trim())) {
+      return NextResponse.json(
+        { error: 'A valid HTTP/HTTPS image URL is required.' },
+        { status: 400, headers: SECURITY_HEADERS }
+      );
+    }
+
+    const safeSortOrder = Math.max(1, Math.min(999999, Math.floor(Number(sortOrder)) || 1));
+    const resolvedImage = await resolveDirectImageUrl(previewImage);
+
+    let resolvedGallery: string[] | undefined = undefined;
+    if (Array.isArray(gallery) && gallery.length > 0) {
+      resolvedGallery = [];
+      for (const item of gallery) {
+        if (typeof item === 'string' && isSafeExternalUrl(item.trim())) {
+          const resolved = await resolveDirectImageUrl(item.trim());
+          if (resolved && !resolvedGallery.includes(resolved)) {
+            resolvedGallery.push(resolved);
+          }
+        }
+      }
+    }
+
+    const setFields: Record<string, any> = {
+      title: title.trim(),
+      previewImage: resolvedImage,
+      gallery: resolvedGallery && resolvedGallery.length > 0 ? resolvedGallery : [],
+      externalUrl: externalUrl.trim(),
+      sortOrder: safeSortOrder,
+      description: description && typeof description === 'string' ? description.trim().slice(0, 1000) : '',
+    };
+
+    const res = await fetch(
+      `https://${projectId}.api.sanity.io/v2024-11-01/data/mutate/${dataset}?returnDocuments=true`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiToken}`,
+        },
+        body: JSON.stringify({
+          mutations: [
+            {
+              patch: {
+                id,
+                set: setFields,
+              },
+            },
+          ],
+        }),
+      }
+    );
+
+    const result = await res.json();
+
+    if (result.error) {
+      return NextResponse.json(
+        { error: result.error.message || 'Sanity mutation error' },
+        { status: 400, headers: SECURITY_HEADERS }
+      );
+    }
+
+    revalidateTag('post');
+    revalidatePath('/');
+    if (slug && typeof slug === 'string') {
+      revalidatePath(`/post/${slug}`);
+    }
+
+    return NextResponse.json(
+      { success: true, document: result.results?.[0]?.document },
+      { headers: SECURITY_HEADERS }
+    );
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: err.message || 'Failed to update post' },
+      { status: 500, headers: SECURITY_HEADERS }
+    );
+  }
+}
+
 export async function DELETE(req: NextRequest) {
   const ip = getClientIp(req);
   const rateLimit = checkRateLimit(ip);
