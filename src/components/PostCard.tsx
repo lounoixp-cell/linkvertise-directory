@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Calendar, ImageOff } from 'lucide-react';
+import { Calendar, ImageOff, Layers } from 'lucide-react';
 import { Post } from '@/types/post';
 import ProtectedImage from '@/components/ProtectedImage';
 
@@ -41,6 +41,14 @@ export default function PostCard({ post, priority = false }: PostCardProps) {
       >
         {/* Preview Image with 16:10 aspect ratio and anti-download protection */}
         <div className="relative aspect-[16/10] w-full overflow-hidden bg-neutral-950">
+          {/* Gallery badge if post has multiple slideshow photos */}
+          {post.gallery && post.gallery.length > 1 && (
+            <div className="absolute top-2.5 right-2.5 z-20 flex items-center gap-1 rounded-full bg-black/75 backdrop-blur-md border border-white/15 px-2 py-0.5 text-[10px] font-bold text-white shadow-lg">
+              <Layers className="h-3 w-3 text-red-400" />
+              <span>{post.gallery.length}</span>
+            </div>
+          )}
+
           {!imgError && post.previewImage ? (
             <ProtectedImage
               src={post.previewImage}

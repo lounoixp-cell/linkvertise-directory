@@ -32,7 +32,12 @@ export const paginatedPostsQuery = groq`{
       publishedAt,
       status,
       sortOrder,
-      description
+      description,
+      "gallery": select(
+        defined(gallery[0].asset) => gallery[].asset->url,
+        defined(gallery) => gallery,
+        []
+      )
     },
   "totalItems": count(*[_type == "post" && !(_id in path("drafts.**")) && status == "active" && defined(slug.current)])
 }`;
