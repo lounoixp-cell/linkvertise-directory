@@ -2,6 +2,12 @@ import { revalidateTag, revalidatePath } from 'next/cache';
 import { type NextRequest, NextResponse } from 'next/server';
 import { parseBody } from 'next-sanity/webhook';
 
+const SECURITY_HEADERS = {
+  'X-Robots-Tag': 'noindex, nofollow, noarchive, nosnippet',
+  'X-Content-Type-Options': 'nosniff',
+  'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+};
+
 type WebhookPayload = {
   _type: string;
   slug?: { current?: string } | string;
@@ -13,7 +19,7 @@ export async function POST(req: NextRequest) {
     if (!secret) {
       return NextResponse.json(
         { message: 'Missing SANITY_REVALIDATE_SECRET environment variable' },
-        { status: 500 }
+        { status: 500, headers: SECURITY_HEADERS }
       );
     }
 
@@ -26,14 +32,14 @@ export async function POST(req: NextRequest) {
     if (!isValidSignature) {
       return NextResponse.json(
         { message: 'Invalid webhook signature' },
-        { status: 401 }
+        { status: 401, headers: SECURITY_HEADERS }
       );
     }
 
     if (!body?._type) {
       return NextResponse.json(
         { message: 'Bad request: missing document type in body' },
-        { status: 400 }
+        { status: 400, headers: SECURITY_HEADERS }
       );
     }
 
@@ -47,14 +53,17 @@ export async function POST(req: NextRequest) {
       revalidatePath(`/post/${slug}`);
     }
 
-    return NextResponse.json({
-      revalidated: true,
-      type: body._type,
-      slug: slug || null,
-      timestamp: new Date().toISOString(),
-    });
+    return NextResponse.json(
+      {
+        revalidated: true,
+        type: body._type,
+        slug: slug || null,
+        timestamp: new Date().toISOString(),
+      },
+      { headers: SECURITY_HEADERS }
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error during revalidation';
-    return NextResponse.json({ message }, { status: 500 });
+    return NextResponse.json({ message }, { status: 500, headers: SECURITY_HEADERS });
   }
 }

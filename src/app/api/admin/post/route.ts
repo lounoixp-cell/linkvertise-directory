@@ -1,126 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath, revalidateTag } from 'next/cache';
-import crypto from 'crypto';
+import {
+  getClientIp,
+  checkRateLimit,
+  recordFailedAttempt,
+  recordSuccessfulAttempt,
+  isAuthorized,
+  isSafeExternalUrl,
+  SECURITY_HEADERS,
+} from '@/lib/adminAuth';
 
 const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || 'zj5cuk1g';
 const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET || 'production';
 const apiToken = process.env.SANITY_API_TOKEN;
-const adminKey = process.env.ADMIN_KEY;
-
-// Security response headers for administrative endpoints
-const SECURITY_HEADERS = {
-  'X-Robots-Tag': 'noindex, nofollow, noarchive, nosnippet',
-  'X-Content-Type-Options': 'nosniff',
-  'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
-};
-
-// In-memory brute force protection: tracks failed auth attempts per IP
-interface RateLimitRecord {
-  attempts: number;
-  lockedUntil: number;
-}
-const authAttempts = new Map<string, RateLimitRecord>();
-const MAX_FAILED_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
-
-function getClientIp(req: NextRequest): string {
-  return (
-    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-    req.headers.get('x-real-ip') ||
-    '127.0.0.1'
-  );
-}
-
-function checkRateLimit(ip: string): { allowed: boolean; remainingSec: number } {
-  const record = authAttempts.get(ip);
-  if (!record) return { allowed: true, remainingSec: 0 };
-
-  const now = Date.now();
-  if (record.lockedUntil > now) {
-    const remainingSec = Math.ceil((record.lockedUntil - now) / 1000);
-    return { allowed: false, remainingSec };
-  }
-
-  // Lockout expired; reset
-  if (record.lockedUntil > 0 && record.lockedUntil <= now) {
-    authAttempts.delete(ip);
-  }
-  return { allowed: true, remainingSec: 0 };
-}
-
-function recordFailedAttempt(ip: string) {
-  const now = Date.now();
-  const record = authAttempts.get(ip) || { attempts: 0, lockedUntil: 0 };
-  record.attempts += 1;
-
-  if (record.attempts >= MAX_FAILED_ATTEMPTS) {
-    record.lockedUntil = now + LOCKOUT_DURATION_MS;
-  }
-  authAttempts.set(ip, record);
-
-  // Prevent memory leaks
-  if (authAttempts.size > 2000) {
-    authAttempts.forEach((val, key) => {
-      if (val.lockedUntil <= now) authAttempts.delete(key);
-    });
-  }
-}
-
-function recordSuccessfulAttempt(ip: string) {
-  authAttempts.delete(ip);
-}
-
-/**
- * Constant-time hash comparison to prevent timing attack side-channel leaks (CWE-208)
- */
-function timingSafeCompare(candidate: string, secret: string): boolean {
-  if (!candidate || !secret) return false;
-  const hashCandidate = crypto.createHash('sha256').update(candidate).digest();
-  const hashSecret = crypto.createHash('sha256').update(secret).digest();
-  return crypto.timingSafeEqual(hashCandidate, hashSecret);
-}
-
-function isAuthorized(req: NextRequest): { authorized: boolean; reason?: string } {
-  // Fail-closed if server secret is unconfigured
-  if (!adminKey || adminKey.trim() === '') {
-    return { authorized: false, reason: 'ADMIN_KEY_NOT_CONFIGURED' };
-  }
-
-  const rawHeader = req.headers.get('authorization') || '';
-  const match = rawHeader.match(/^Bearer\s+(.+)$/i);
-  if (!match) {
-    return { authorized: false, reason: 'MISSING_BEARER_TOKEN' };
-  }
-
-  const candidateKey = match[1].trim();
-  const valid = timingSafeCompare(candidateKey, adminKey);
-  return { authorized: valid };
-}
-
-function isSafeExternalUrl(urlStr: string): boolean {
-  try {
-    const parsed = new URL(urlStr);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      return false;
-    }
-    const hostname = parsed.hostname.toLowerCase();
-    // Prevent SSRF against loopback, metadata services, and internal nets
-    if (
-      hostname === 'localhost' ||
-      hostname === '127.0.0.1' ||
-      hostname === '0.0.0.0' ||
-      hostname === '::1' ||
-      hostname.endsWith('.internal') ||
-      hostname.endsWith('.local') ||
-      hostname === '169.254.169.254'
-    ) {
-      return false;
-    }
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 async function resolveDirectImageUrl(inputUrl: string): Promise<string> {
   const trimmed = inputUrl.trim();
@@ -140,7 +32,10 @@ async function resolveDirectImageUrl(inputUrl: string): Promise<string> {
           const html = await pageRes.text();
           const match = html.match(/<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i);
           if (match && match[1]) {
-            return match[1].trim();
+            const candidate = match[1].trim();
+            if (isSafeExternalUrl(candidate)) {
+              return candidate;
+            }
           }
         }
       }
@@ -149,7 +44,7 @@ async function resolveDirectImageUrl(inputUrl: string): Promise<string> {
     // Imgur page without file extension (e.g., https://imgur.com/abc1234)
     if ((hostname === 'imgur.com' || hostname === 'www.imgur.com') && !parsed.pathname.includes('.')) {
       const id = parsed.pathname.replace(/^\//, '');
-      if (id) {
+      if (id && /^[a-zA-Z0-9]+$/.test(id)) {
         return `https://i.imgur.com/${id}.jpg`;
       }
     }

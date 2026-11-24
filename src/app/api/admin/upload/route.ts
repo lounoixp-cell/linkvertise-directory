@@ -1,39 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
-import crypto from 'crypto';
+import {
+  getClientIp,
+  checkRateLimit,
+  recordFailedAttempt,
+  recordSuccessfulAttempt,
+  isAuthorized,
+  isValidImageBuffer,
+  sanitizeFilename,
+  SECURITY_HEADERS,
+} from '@/lib/adminAuth';
 
 const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID || 'zj5cuk1g';
 const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET || 'production';
 const apiToken = process.env.SANITY_API_TOKEN;
-const adminKey = process.env.ADMIN_KEY;
-
-const SECURITY_HEADERS = {
-  'X-Robots-Tag': 'noindex, nofollow, noarchive, nosnippet',
-  'X-Content-Type-Options': 'nosniff',
-  'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
-};
-
-function timingSafeCompare(candidate: string, secret: string): boolean {
-  if (!candidate || !secret) return false;
-  const hashCandidate = crypto.createHash('sha256').update(candidate).digest();
-  const hashSecret = crypto.createHash('sha256').update(secret).digest();
-  return crypto.timingSafeEqual(hashCandidate, hashSecret);
-}
-
-function isAuthorized(req: NextRequest): boolean {
-  if (!adminKey || adminKey.trim() === '') return false;
-  const rawHeader = req.headers.get('authorization') || '';
-  const match = rawHeader.match(/^Bearer\s+(.+)$/i);
-  if (!match) return false;
-  return timingSafeCompare(match[1].trim(), adminKey);
-}
 
 export async function POST(req: NextRequest) {
-  if (!isAuthorized(req)) {
+  const ip = getClientIp(req);
+  const rateLimit = checkRateLimit(ip);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: `Too many failed attempts. Access locked for ${rateLimit.remainingSec}s.` },
+      { status: 429, headers: { ...SECURITY_HEADERS, 'Retry-After': String(rateLimit.remainingSec) } }
+    );
+  }
+
+  const auth = isAuthorized(req);
+  if (!auth.authorized) {
+    recordFailedAttempt(ip);
+    if (auth.reason === 'ADMIN_KEY_NOT_CONFIGURED') {
+      return NextResponse.json(
+        { error: 'Server misconfiguration: ADMIN_KEY is not set.' },
+        { status: 500, headers: SECURITY_HEADERS }
+      );
+    }
     return NextResponse.json(
       { error: 'Unauthorized: Invalid passcode.' },
       { status: 401, headers: SECURITY_HEADERS }
     );
   }
+
+  recordSuccessfulAttempt(ip);
 
   if (!apiToken) {
     return NextResponse.json(
@@ -64,16 +70,25 @@ export async function POST(req: NextRequest) {
     const contentType = file.type || 'image/jpeg';
     if (!contentType.startsWith('image/')) {
       return NextResponse.json(
-        { error: 'Uploaded file must be a valid image.' },
+        { error: 'Uploaded file must be a valid image MIME type.' },
         { status: 400, headers: SECURITY_HEADERS }
       );
     }
 
-    const filename = file.name || 'upload.jpg';
     const buffer = Buffer.from(await file.arrayBuffer());
 
+    // Deep inspection: verify magic bytes to ensure file is an authentic image
+    if (!isValidImageBuffer(buffer)) {
+      return NextResponse.json(
+        { error: 'Invalid image format: file contents do not match authentic image signatures.' },
+        { status: 400, headers: SECURITY_HEADERS }
+      );
+    }
+
+    const safeFilename = sanitizeFilename(file.name || 'upload.webp');
+
     const sanityRes = await fetch(
-      `https://${projectId}.api.sanity.io/v2024-11-01/assets/images/${dataset}?filename=${encodeURIComponent(filename)}`,
+      `https://${projectId}.api.sanity.io/v2024-11-01/assets/images/${dataset}?filename=${encodeURIComponent(safeFilename)}`,
       {
         method: 'POST',
         headers: {

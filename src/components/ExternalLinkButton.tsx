@@ -11,7 +11,7 @@ interface ExternalLinkButtonProps {
 
 export default function ExternalLinkButton({ externalUrl }: ExternalLinkButtonProps) {
   const validation = validateExternalUrl(externalUrl);
-  const targetUrl = validation.isValid && validation.sanitizedUrl ? validation.sanitizedUrl : externalUrl;
+  const targetUrl = validation.isValid && validation.sanitizedUrl ? validation.sanitizedUrl : null;
 
   const handleOpenLink = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
