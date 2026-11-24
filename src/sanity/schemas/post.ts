@@ -55,6 +55,21 @@ export const postSchema = defineType({
       validation: (Rule) => Rule.required(),
     }),
     defineField({
+      name: 'gallery',
+      title: 'Gallery Images (Slideshow)',
+      type: 'array',
+      of: [
+        {
+          type: 'image',
+          options: { hotspot: true },
+        },
+        {
+          type: 'string',
+        },
+      ],
+      description: 'Optional additional images for slideshow player',
+    }),
+    defineField({
       name: 'externalUrl',
       title: 'External Destination URL',
       type: 'url',

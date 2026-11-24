@@ -65,7 +65,12 @@ export const postBySlugQuery = groq`*[_type == "post" && slug.current == $slug &
   publishedAt,
   status,
   sortOrder,
-  description
+  description,
+  "gallery": select(
+    defined(gallery[0].asset) => gallery[].asset->url,
+    defined(gallery) => gallery,
+    []
+  )
 }`;
 
 /**
@@ -99,7 +104,12 @@ export const adjacentPostsQuery = groq`{
     publishedAt,
     status,
     sortOrder,
-    description
+    description,
+    "gallery": select(
+      defined(gallery[0].asset) => gallery[].asset->url,
+      defined(gallery) => gallery,
+      []
+    )
   },
   "indexList": *[_type == "post" && !(_id in path("drafts.**")) && status == "active" && defined(slug.current)]
     | order(sortOrder asc, publishedAt desc, _id asc) {

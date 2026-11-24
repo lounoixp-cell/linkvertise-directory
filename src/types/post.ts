@@ -5,6 +5,7 @@ export interface Post {
   tag: string;              // Category/tag
   previewImage: string;     // Image URL or Sanity Image object
   previewImageAlt?: string; // Accessibility alt text
+  gallery?: string[];       // Slideshow images (optional)
   externalUrl: string;      // Outbound destination URL
   destinationDomain: string;// Clean domain for display (e.g. "linkvertise.com")
   publishedAt: string;      // ISO datetime string

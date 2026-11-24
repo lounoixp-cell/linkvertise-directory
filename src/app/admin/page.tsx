@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, Trash2, ExternalLink, Lock, CheckCircle2, AlertCircle, RefreshCw, Eye, Upload, Image as ImageIcon } from 'lucide-react';
+import { Plus, Trash2, ExternalLink, Lock, CheckCircle2, AlertCircle, RefreshCw, Eye, Upload, Image as ImageIcon, X, Layers } from 'lucide-react';
+import { compressImageToWebP } from '@/lib/imageOptimizer';
 
 interface SanityPostItem {
   _id: string;
   title: string;
   slug?: { current?: string } | string;
   previewImage?: string;
+  gallery?: string[];
   externalUrl: string;
   sortOrder?: number;
   publishedAt?: string;
@@ -24,6 +26,7 @@ export default function AdminPage() {
   const [title, setTitle] = useState('');
   const [externalUrl, setExternalUrl] = useState('');
   const [previewImage, setPreviewImage] = useState('');
+  const [gallery, setGallery] = useState<string[]>([]);
   const [sortOrder, setSortOrder] = useState('1');
   const [description, setDescription] = useState('');
 
@@ -88,30 +91,58 @@ export default function AdminPage() {
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
     setUploadingImage(true);
     setMessage(null);
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
+      const newUrls: string[] = [];
+      let totalOriginalBytes = 0;
+      let totalCompressedBytes = 0;
 
-      const res = await fetch('/api/admin/upload', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${adminKey}`,
-        },
-        body: formData,
-      });
+      for (const file of files) {
+        // Automatically optimize & convert to WebP in browser before uploading
+        const { file: optimizedFile, originalSize, compressedSize } = await compressImageToWebP(file);
+        totalOriginalBytes += originalSize;
+        totalCompressedBytes += compressedSize;
 
-      const data = await res.json();
-      if (res.ok && data.url) {
-        setPreviewImage(data.url);
-        setMessage({ type: 'success', text: 'Image uploaded to Sanity CDN successfully!' });
-      } else {
-        setMessage({ type: 'error', text: data.error || 'Failed to upload image' });
+        const formData = new FormData();
+        formData.append('file', optimizedFile);
+
+        const res = await fetch('/api/admin/upload', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${adminKey}`,
+          },
+          body: formData,
+        });
+
+        const data = await res.json();
+        if (res.ok && data.url) {
+          newUrls.push(data.url);
+        } else {
+          setMessage({ type: 'error', text: data.error || `Failed to upload ${file.name}` });
+        }
+      }
+
+      if (newUrls.length > 0) {
+        // Set first as preview image if currently empty
+        if (!previewImage) {
+          setPreviewImage(newUrls[0]);
+        }
+        setGallery((prev) => [...prev, ...newUrls]);
+
+        const savedPercent =
+          totalOriginalBytes > 0
+            ? Math.round(((totalOriginalBytes - totalCompressedBytes) / totalOriginalBytes) * 100)
+            : 0;
+
+        setMessage({
+          type: 'success',
+          text: `Uploaded ${newUrls.length} image(s) to Sanity CDN! Converted to WebP (Saved ~${savedPercent}% storage: ${(totalOriginalBytes / 1024).toFixed(0)}KB → ${(totalCompressedBytes / 1024).toFixed(0)}KB).`,
+        });
       }
     } catch {
       setMessage({ type: 'error', text: 'Network error during image upload' });
@@ -121,12 +152,32 @@ export default function AdminPage() {
     }
   };
 
+  const handleRemoveFromGallery = (indexToRemove: number) => {
+    setGallery((prev) => {
+      const updated = prev.filter((_, idx) => idx !== indexToRemove);
+      if (updated.length > 0) {
+        setPreviewImage(updated[0]);
+      } else {
+        setPreviewImage('');
+      }
+      return updated;
+    });
+  };
+
+  const handleSetCover = (url: string) => {
+    setPreviewImage(url);
+    setGallery((prev) => [url, ...prev.filter((u) => u !== url)]);
+  };
+
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage(null);
     setLoading(true);
 
     try {
+      const cover = previewImage || (gallery.length > 0 ? gallery[0] : '');
+      const finalGallery = gallery.length > 0 ? (gallery.includes(cover) ? gallery : [cover, ...gallery]) : (cover ? [cover] : []);
+
       const res = await fetch('/api/admin/post', {
         method: 'POST',
         headers: {
@@ -136,7 +187,8 @@ export default function AdminPage() {
         body: JSON.stringify({
           title,
           externalUrl,
-          previewImage,
+          previewImage: cover,
+          gallery: finalGallery,
           sortOrder: Number(sortOrder) || 1,
           description,
         }),
@@ -149,6 +201,7 @@ export default function AdminPage() {
         setTitle('');
         setExternalUrl('');
         setPreviewImage('');
+        setGallery([]);
         setDescription('');
         setSortOrder(String(posts.length + 2));
         fetchPosts(adminKey);
@@ -322,9 +375,17 @@ export default function AdminPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-neutral-300">
-                  Preview Image <span className="text-red-500">*</span>
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-medium text-neutral-300">
+                    Post Images / Gallery <span className="text-red-500">*</span>
+                  </label>
+                  {gallery.length > 1 && (
+                    <span className="flex items-center gap-1 rounded bg-red-950/80 border border-red-800/50 px-2 py-0.5 text-[10px] font-semibold text-red-300">
+                      <Layers className="h-3 w-3 text-red-400" />
+                      Slideshow ({gallery.length} Photos)
+                    </span>
+                  )}
+                </div>
                 
                 {/* Upload to Sanity or URL options */}
                 <div className="mt-1.5 space-y-2">
@@ -333,19 +394,20 @@ export default function AdminPage() {
                       {uploadingImage ? (
                         <>
                           <RefreshCw className="h-4 w-4 animate-spin text-red-500" />
-                          <span>Uploading directly to Sanity CDN...</span>
+                          <span>Converting to WebP & Uploading...</span>
                         </>
                       ) : (
                         <>
-                          <Upload className="h-4 w-4 text-red-400" />
+                          <Upload className="h-4 w-4 text-red-400 shrink-0" />
                           <div className="text-left">
-                            <span className="font-semibold text-white block">Upload Image to Sanity CMS</span>
-                            <span className="text-[10px] text-neutral-400 block">Saves directly into your Sanity project (no third-party hosting needed)</span>
+                            <span className="font-semibold text-white block">Upload Image(s) — Auto-WebP</span>
+                            <span className="text-[10px] text-neutral-400 block">Select 1 or multiple photos. Converts to WebP (saves ~90% storage).</span>
                           </div>
                         </>
                       )}
                       <input
                         type="file"
+                        multiple
                         accept="image/*"
                         disabled={uploadingImage}
                         onChange={handleImageUpload}
@@ -354,12 +416,53 @@ export default function AdminPage() {
                     </label>
                   </div>
 
+                  {/* Multi-Photo Gallery Thumbnail Strip */}
+                  {gallery.length > 0 && (
+                    <div className="space-y-1.5 rounded-lg border border-neutral-800 bg-neutral-950/80 p-2.5">
+                      <div className="flex items-center justify-between text-[11px] text-neutral-400">
+                        <span>Selected Slides ({gallery.length}):</span>
+                        <span className="text-[10px] text-neutral-500">First image is cover card</span>
+                      </div>
+                      <div className="flex gap-2 overflow-x-auto pb-1.5 scrollbar-thin">
+                        {gallery.map((url, idx) => {
+                          const isCover = (previewImage && previewImage === url) || (!previewImage && idx === 0);
+                          return (
+                            <div
+                              key={url + idx}
+                              className={`group relative h-16 w-16 shrink-0 overflow-hidden rounded-md border transition ${
+                                isCover ? 'border-red-500 ring-1 ring-red-500' : 'border-neutral-800 hover:border-neutral-700'
+                              }`}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={url} alt={`Slide ${idx + 1}`} className="h-full w-full object-cover" />
+                              <span className="absolute bottom-0.5 left-0.5 rounded bg-black/80 px-1 text-[8px] font-mono text-white">
+                                {isCover ? 'Cover' : `#${idx + 1}`}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveFromGallery(idx)}
+                                className="absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-600/90 text-white opacity-0 group-hover:opacity-100 transition shadow"
+                                title="Remove photo"
+                              >
+                                <X className="h-2.5 w-2.5" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="relative">
                     <input
                       type="url"
-                      required
                       value={previewImage}
-                      onChange={(e) => setPreviewImage(e.target.value)}
+                      onChange={(e) => {
+                        setPreviewImage(e.target.value);
+                        if (e.target.value && !gallery.includes(e.target.value)) {
+                          setGallery((prev) => [e.target.value, ...prev]);
+                        }
+                      }}
                       placeholder="Or paste direct image URL (ImgBB, Imgur, Sanity CDN)..."
                       className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-xs text-white placeholder-neutral-600 focus:border-red-500 focus:outline-none"
                     />
@@ -369,7 +472,7 @@ export default function AdminPage() {
                   {previewImage && (
                     <div className="mt-2 space-y-1">
                       <div className="flex items-center justify-between text-[11px] text-neutral-400">
-                        <span>Card Preview:</span>
+                        <span>Cover Card Preview:</span>
                         <span className="text-[10px] text-emerald-400 font-medium">Uncropped with Ambient Backdrop</span>
                       </div>
                       <div className="relative aspect-[16/10] w-full overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950">
@@ -536,6 +639,12 @@ export default function AdminPage() {
                           <h3 className="text-sm font-semibold text-white truncate">
                             {post.title}
                           </h3>
+                          {post.gallery && post.gallery.length > 1 && (
+                            <span className="flex items-center gap-0.5 rounded bg-red-950/80 border border-red-800/40 px-1.5 py-0.5 text-[9px] font-medium text-red-400 shrink-0">
+                              <Layers className="h-2.5 w-2.5" />
+                              {post.gallery.length} photos
+                            </span>
+                          )}
                         </div>
                         <p className="mt-1 text-xs text-neutral-500 truncate flex items-center gap-1">
                           <ExternalLink className="h-3 w-3 shrink-0" />

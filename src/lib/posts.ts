@@ -276,6 +276,8 @@ interface SanityPostItem {
   tag?: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   previewImage?: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  gallery?: any[];
   externalUrl: string;
   publishedAt: string;
   status: 'active' | 'archived';
@@ -310,6 +312,23 @@ function mapSanityPostToPost(doc: SanityPostItem): Post {
 
   const tag = doc.tag || 'General';
 
+  const rawGallery = Array.isArray(doc.gallery) ? doc.gallery : [];
+  const gallery: string[] = [];
+  for (const item of rawGallery) {
+    if (typeof item === 'string' && item.trim()) {
+      gallery.push(item.trim());
+    } else if (item?.asset?.url) {
+      gallery.push(item.asset.url);
+    } else if (item?.url) {
+      gallery.push(item.url);
+    }
+  }
+
+  // Ensure primary image is included if gallery is provided
+  const finalGallery = gallery.length > 0
+    ? (gallery.includes(imageUrl) ? gallery : [imageUrl, ...gallery])
+    : (imageUrl ? [imageUrl] : []);
+
   return {
     id: doc._id,
     slug: doc.slug,
@@ -317,6 +336,7 @@ function mapSanityPostToPost(doc: SanityPostItem): Post {
     tag,
     previewImage: imageUrl,
     previewImageAlt: doc.previewImage?.alt || (typeof doc.previewImage === 'object' ? doc.previewImage?.alt : undefined) || `${doc.title} preview image`,
+    gallery: finalGallery,
     externalUrl: doc.externalUrl,
     destinationDomain: extractDomain(doc.externalUrl),
     publishedAt: doc.publishedAt,

@@ -230,7 +230,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { title, externalUrl, previewImage, description, sortOrder } = body;
+    const { title, externalUrl, previewImage, description, sortOrder, gallery } = body;
 
     // Strict input validation
     if (!title || typeof title !== 'string' || title.trim().length === 0 || title.length > 200) {
@@ -259,6 +259,20 @@ export async function POST(req: NextRequest) {
     // Automatically resolve sharing pages (e.g. ibb.co/XYZ) to direct image URLs
     const resolvedImage = await resolveDirectImageUrl(previewImage);
 
+    // Resolve any gallery images
+    let resolvedGallery: string[] | undefined = undefined;
+    if (Array.isArray(gallery) && gallery.length > 0) {
+      resolvedGallery = [];
+      for (const item of gallery) {
+        if (typeof item === 'string' && isSafeExternalUrl(item.trim())) {
+          const resolved = await resolveDirectImageUrl(item.trim());
+          if (resolved && !resolvedGallery.includes(resolved)) {
+            resolvedGallery.push(resolved);
+          }
+        }
+      }
+    }
+
     const slugCurrent = title
       .toLowerCase()
       .trim()
@@ -274,6 +288,7 @@ export async function POST(req: NextRequest) {
         current: slugCurrent || `post-${Date.now()}`,
       },
       previewImage: resolvedImage,
+      gallery: resolvedGallery && resolvedGallery.length > 0 ? resolvedGallery : undefined,
       externalUrl: externalUrl.trim(),
       publishedAt: new Date().toISOString(),
       status: 'active',

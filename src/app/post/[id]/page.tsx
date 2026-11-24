@@ -1,10 +1,10 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowLeft, ImageOff } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { getPostByIdOrSlug, getAdjacentPosts, getAllSortedPosts } from '@/lib/posts';
 import ExternalLinkButton from '@/components/ExternalLinkButton';
 import PostNavigation from '@/components/PostNavigation';
-import ProtectedImage from '@/components/ProtectedImage';
+import Slideshow from '@/components/Slideshow';
 
 interface PostPageProps {
   params: {
@@ -80,25 +80,19 @@ export default async function PostDetailPage({ params }: PostPageProps) {
 
       {/* Main Post Container */}
       <article className="overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900/60 p-6 sm:p-8 shadow-xl backdrop-blur-sm">
-        {/* Preview Image maintaining aspect ratio with anti-download protection */}
-        <div className="relative aspect-[16/9] w-full overflow-hidden rounded-xl bg-neutral-950 mb-6">
-          {post.previewImage ? (
-            <ProtectedImage
-              src={post.previewImage}
-              alt={post.previewImageAlt || post.title}
-              fill
-              sizes="(max-width: 1024px) 100vw, 896px"
-              priority
-            />
-          ) : (
-            <div
-              data-fallback="placeholder"
-              className="flex h-full w-full flex-col items-center justify-center gap-1.5 bg-neutral-950 text-neutral-600"
-            >
-              <ImageOff className="h-8 w-8 text-neutral-600" aria-hidden="true" />
-              <span className="text-xs font-medium">Image Preview Unavailable</span>
-            </div>
-          )}
+        {/* Slideshow or Single Preview Image with ambient backdrop & anti-download protection */}
+        <div className="mb-6">
+          <Slideshow
+            images={
+              post.gallery && post.gallery.length > 0
+                ? post.gallery
+                : post.previewImage
+                ? [post.previewImage]
+                : []
+            }
+            alt={post.previewImageAlt || post.title}
+            priority
+          />
         </div>
 
         {/* Post Title */}
